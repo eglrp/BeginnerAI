@@ -1,63 +1,125 @@
+import lib.yolo3.utils as yolo_utils
+import lib.yolo3.net as yolo_net
 import torch
-
-from torch.autograd import Variable
-from torch.optim import SGD
-from torch.utils.data import DataLoader
-
-from lib.dataset.pytorch_dataset import ListDataset
-from lib.models.yolov3 import YOLOv3Module, YOLOv3Detection
-from lib.utils.models import AnnotationTransform
-from lib.utils.functions import weights_init_normal
-from lib.ProgressBar import ProgressBar
-
-YOLOv3Config = {
-    "CLASS_NUMS" : 20,
-    "CLASSES" : ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair',
-                 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep',
-                 'sofa', 'train', 'tvmonitor'],
+import time
+import lib.ProgressBar as j_bar
+import lib.yolo3.dataset as yolo_data
+import torchvision
+import lib.yolo3.predict as yolo_predict
+CONFIG = {
+    "DATA_CONFIG_FILE" : "utils/voc.data",
+    "CONFIG_FILE" : "utils/yolo_v3.cfg",
     "IMAGE_SIZE" : 416,
-    "EPOCHS" : 120,
-    "IMAGE_CHANNEL" : 3,
-    "GPU_NUMS" : 0,
-    "LEARNING_RATE" : 1e-4,
-    "BATCH_SIZE" : 1,
-    "MOMENTUM" : 0.9,
-    "WEIGHT_DECAY" : 1e-4,
-    "DATA_PATH" : "/input/"
+    "WEIGHTS_FILE" : "utils/yolov3.weights",
+    "USE_GPU" : torch.cuda.is_available(),
+    "CLASSES" : (  # always index 0
+        'aeroplane', 'bicycle', 'bird', 'boat',
+        'bottle', 'bus', 'car', 'cat', 'chair',
+        'cow', 'diningtable', 'dog', 'horse',
+        'motorbike', 'person', 'pottedplant',
+        'sheep', 'sofa', 'train', 'tvmonitor')
 }
-warm_lr = YOLOv3Config["LEARNING_RATE"] / YOLOv3Config["BATCH_SIZE"]
+FROM_TRAIN_ITER = 4
+data_options  = yolo_utils.LoadUtils.read_data_cfg(CONFIG["DATA_CONFIG_FILE"])
+net_options   = yolo_utils.LoadUtils.parse_cfg(CONFIG["CONFIG_FILE"])[0]
+weightfile = CONFIG["WEIGHTS_FILE"]
 
-net = YOLOv3Module("utils/YOLOv3.cfg")
-net.apply(weights_init_normal)
+trainlist     = data_options["train"]
+batch_size    = int(net_options['batch'])
+max_batches   = int(net_options['max_batches'])
+learning_rate = float(net_options['learning_rate'])
+momentum      = float(net_options['momentum'])
+decay         = float(net_options['decay'])
+steps         = [float(step) for step in net_options['steps'].split(',')]
+scales        = [float(scale) for scale in net_options['scales'].split(',')]
 
-if YOLOv3Config["GPU_NUMS"] > 0 :
-    net = net.cuda()
+try:
+    max_epochs = int(net_options['max_epochs'])
+except KeyError:
+    max_epochs = 120
 
-net.train()
+seed = int(time.time())
+torch.manual_seed(seed)
+if CONFIG["USE_GPU"]:
+    torch.cuda.manual_seed(seed)
+    torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
-optimizer = SGD(net.parameters(), lr=warm_lr, momentum=YOLOv3Config["MOMENTUM"],
-                weight_decay=YOLOv3Config["WEIGHT_DECAY"])
+model = yolo_net.Darknet(CONFIG["CONFIG_FILE"], use_cuda=CONFIG["USE_GPU"])
+# model.load_weights(weightfile)
+nsamples = yolo_utils.LoadUtils.file_lines(trainlist)
+model.seen = 0
+init_epoch = 0
+loss_layers = model.loss_layers
 
-data_loader = DataLoader(
-    ListDataset("/input", target_transform=AnnotationTransform(classes=YOLOv3Config["CLASSES"])),
-    batch_size=YOLOv3Config["BATCH_SIZE"], shuffle=False)
+if CONFIG["USE_GPU"]:
+    model = model.cuda()
 
-bar = ProgressBar(YOLOv3Config["EPOCHS"], len(data_loader), "Loss:%.3f")
+init_width = model.width
+init_height = model.height
 
-for epoch in range(1, YOLOv3Config["EPOCHS"]):
-    for i, (imgs, targets) in enumerate(data_loader):
-        imgs = Variable(imgs.cuda() if YOLOv3Config["GPU_NUMS"] > 0 else imgs)
-        # targets = [anno.cuda() for anno in targets] if CFG["GPU_NUMS"] > 0 else [anno for anno in targets]
+optimizer = torch.optim.SGD(model.parameters(),
+                            lr=learning_rate, momentum=momentum,
+                            dampening=0, weight_decay=decay*batch_size)
+train_loader = torch.utils.data.DataLoader(
+    yolo_data.listDataset(trainlist, shape=(init_width, init_height),
+                          shuffle=True,
+                          transform=torchvision.transforms.Compose([
+                              torchvision.transforms.ToTensor(),
+                          ]),
+                          train=True,
+                          seen=model.seen,
+                          batch_size=batch_size),
+    batch_size=batch_size, shuffle=False)
+
+def adjust_learning_rate(optimizer, batch):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    lr = learning_rate
+    for i in range(len(steps)):
+        scale = scales[i] if i < len(scales) else 1
+        if batch >= steps[i]:
+            lr = lr * scale
+            if batch == steps[i]:
+                break
+        else:
+            break
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr/batch_size
+    return lr
+processed_batches = 0
+if FROM_TRAIN_ITER > 1:
+    model.load_state_dict(torch.load("outputs/YOLOV3_%03d.pth" % (FROM_TRAIN_ITER - 1)))
+
+predict = yolo_predict.YoloV3Predict(CONFIG["CLASSES"])
+bar = j_bar.ProgressBar(max_epochs, len(train_loader), "Loss:%.3f;Total Loss:%.3f")
+for epoch in range(FROM_TRAIN_ITER, max_epochs + 1):
+    model.train()
+    total_loss = 0
+    for batch_idx, (data, target) in enumerate(train_loader):
+        processed_batches = model.seen//batch_size
+
+        adjust_learning_rate(optimizer, processed_batches)
+        processed_batches = processed_batches + 1
+        images = torch.autograd.Variable(data.cuda() if CONFIG["USE_GPU"] else data)
+        target = torch.autograd.variable(target.cuda() if CONFIG["USE_GPU"] else target)
 
         optimizer.zero_grad()
-        loss = net(imgs, targets)
 
+        output = model(data)
+
+        org_loss = []
+        for i, l in enumerate(loss_layers):
+            l.seen = l.seen + data.data.size(0)
+            ol=l(output[i]['x'], target)
+            org_loss.append(ol)
+
+        loss = sum(org_loss) / batch_size
         loss.backward()
         optimizer.step()
+        total_loss += loss.item()
 
-        bar.show(epoch, loss.item())
+        bar.show(epoch, loss.item(), total_loss / (batch_idx + 1))
 
-    torch.save(net.state_dict(), "YOLOv3_%3d.pth" % epoch)
-    detection = YOLOv3Detection(CLASS=YOLOv3Config["CLASSES"], sourceImagePath="../testImages/",
-                                targetImagePath="pre/", Net=net)
-    detection.imageShow()
+    torch.save(model.state_dict(), "outputs/YOLOV3_%03d.pth" % epoch)
+
+    model.eval()
+    predict.predict(model, epoch, "testImages/demo.jpg")

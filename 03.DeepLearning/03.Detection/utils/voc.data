@@ -1,0 +1,4 @@
+train  = utils/2012_trainval.txt
+valid  = utils/2012_trainval.txt
+names = utils/voc.names
+backup = backup

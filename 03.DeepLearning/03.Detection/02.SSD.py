@@ -1,67 +1,146 @@
-# https://github.com/AceCoooool/detection-pytorch
-import torch
+import torch as t
+import torchvision as tv
 
-from torch.autograd import Variable
-from torch.optim import SGD
-from torch.utils.data import DataLoader
+import cv2
+import numpy as np
 
-from lib.dataset.pytorch_dataset import SSDDataSetForPytorch
-from lib.models.ssd import SSDModule, MultiBoxLoss, SSDDetection
-from lib.utils.models import Augmentation, AnnotationTransform
-from lib.utils.functions import weights_init, detection_collate
-from lib.ProgressBar import ProgressBar
+import lib.ssd.augmentations as ssd_aug
+import lib.ssd.dataset as ssd_data
+import lib.ssd.loss as ssd_loss
+import lib.ssd.net as ssd_net
+import lib.ssd.predict as ssd_predict
+import lib.ssd.utils as ssd_utils
 
-IMAGE_CHANNEL = 3
-IMAGE_SIZE = 300
-GPU_NUMS = 0
-BATCH_SIZE = 32
-EPOCH = 120
+import lib.ProgressBar as j_bar
 
-VOC_CLASSES = (  # always index 0
-    'aeroplane', 'bicycle', 'bird', 'boat',
-    'bottle', 'bus', 'car', 'cat', 'chair',
-    'cow', 'diningtable', 'dog', 'horse',
-    'motorbike', 'person', 'pottedplant',
-    'sheep', 'sofa', 'train', 'tvmonitor')
+CONFIG = {
+    "USE_GPU" : t.cuda.is_available(),
+    "DATA_PATH" : "/input",
+    "IMAGE_SIZE" : 300,
+    "IMAGE_CHANNEL" : 3,
+    "EPOCH" : 120,
+    "LEARNING_RATE" : 0.001,
+    "MOMENTUM" : 0.9,
+    "WEIGHT_DECAY" : 5e-4,
+    "BATCH_SIZE" : 32,
+    "GAMMA" : 0.1,
+    "MEANS" : (104, 117, 123),
+    'num_classes': 21,  # 分类类别20+背景1
+    'lr_steps': (80000, 100000, 120000),
+    'max_iter': 120000,  # 迭代次数
+    'feature_maps': [38, 19, 10, 5, 3, 1],
+    'min_dim': 300,  # 当前SSD300只支持大小300×300的数据集训练
+    'steps': [8, 16, 32, 64, 100, 300],  # 感受野，相对于原图缩小的倍数
+    'min_sizes': [30, 60, 111, 162, 213, 264],
+    'max_sizes': [60, 111, 162, 213, 264, 315],
+    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+    'variance': [0.1, 0.2],  # 方差
+    'clip': True,
+    'name': 'VOC',
+    "CLASSES" : (  # always index 0
+        'aeroplane', 'bicycle', 'bird', 'boat',
+        'bottle', 'bus', 'car', 'cat', 'chair',
+        'cow', 'diningtable', 'dog', 'horse',
+        'motorbike', 'person', 'pottedplant',
+        'sheep', 'sofa', 'train', 'tvmonitor')
+}
 
-Net = SSDModule(phase="train")
-if GPU_NUMS > 0:
-    Net = Net.cuda()
-Net.bone.load_state_dict(torch.load("vgg_rfc.pth"))
-Net.extras.apply(weights_init)
-Net.loc.apply(weights_init)
-Net.conf.apply(weights_init)
+Color = [[0, 0, 0],
+         [128, 0, 0],
+         [0, 128, 0],
+         [128, 128, 0],
+         [0, 0, 128],
+         [128, 0, 128],
+         [0, 128, 128],
+         [128, 128, 128],
+         [64, 0, 0],
+         [192, 0, 0],
+         [64, 128, 0],
+         [192, 128, 0],
+         [64, 0, 128],
+         [192, 0, 128],
+         [64, 128, 128],
+         [192, 128, 128],
+         [0, 64, 0],
+         [128, 64, 0],
+         [0, 192, 0],
+         [128, 192, 0],
+         [0, 64, 128]]
 
-optimizer = SGD(Net.parameters(), lr=1e-3,momentum=0.9, weight_decay=5e-4)
+FROM_TRAIN_ITER = 1
+if CONFIG["USE_GPU"]:
+    t.set_default_tensor_type('torch.cuda.FloatTensor')
+else:
+    t.set_default_tensor_type('torch.FloatTensor')
 
-criterion = MultiBoxLoss().cuda() if GPU_NUMS > 0 else MultiBoxLoss()
-Net.train()
-loc_loss, conf_loss = 0, 0
-dataset = SSDDataSetForPytorch(transform=Augmentation(), target_transform=AnnotationTransform(classes=VOC_CLASSES))
-data_loader = DataLoader(dataset, BATCH_SIZE,
-                         shuffle=True, collate_fn=detection_collate, pin_memory=True)
-epoch_size = len(dataset) // BATCH_SIZE
+dataset = ssd_data.VOCDetection(root=CONFIG["DATA_PATH"],image_sets=[('2012', 'trainval')],
+                              transform=ssd_aug.SSDAugmentation(CONFIG["IMAGE_SIZE"],CONFIG["MEANS"]),
+                              target_transform=ssd_data.VOCAnnotationTransform(CONFIG["CLASSES"]))
 
-bar = ProgressBar(EPOCH, len(data_loader), "Loss:%.3f")
+net = ssd_net.build_ssd("train", CONFIG)
+vgg_weights = t.load("utils/SSD300_PreTrained_VGG.pth")
 
-for epoch in range(1,EPOCH):
-    for i,(imgs, targets) in enumerate(data_loader):
-        imgs = Variable(imgs.cuda() if GPU_NUMS > 0 else imgs)
-        targets = [anno.cuda() for anno in targets] if GPU_NUMS > 0 else [anno for anno in targets]
+net.vgg.load_state_dict(vgg_weights)
+
+# 使用xavier方法来初始化vgg后面的新增层、loc用于回归层、conf用于分类层  的权重
+net.extras.apply(ssd_utils.weights_init)
+net.loc.apply(ssd_utils.weights_init)
+net.conf.apply(ssd_utils.weights_init)
+
+LEARNING_RATE = CONFIG["LEARNING_RATE"]
+optimizer = t.optim.SGD(net.parameters(), lr=CONFIG["LEARNING_RATE"], momentum=CONFIG["MOMENTUM"],
+                        weight_decay=CONFIG["WEIGHT_DECAY"])
+# SSD的损失函数
+criterion = ssd_loss.MultiBoxLoss(CONFIG, CONFIG['num_classes'], 0.5, True, 0, True, 3, 0.5,
+                                False, CONFIG["USE_GPU"])
+
+train_loader = t.utils.data.DataLoader(dataset, CONFIG["BATCH_SIZE"],
+                                       shuffle=True, collate_fn=ssd_utils.detection_collate)
+
+if FROM_TRAIN_ITER > 1:
+    net.load_state_dict(t.load("outputs/SSD_%03d.pth" % (FROM_TRAIN_ITER - 1)))
+
+index = 0
+step_index = 0
+# predict = j_m_ssd.SSDPredict(CONFIG["CLASSES"])
+bar = j_bar.ProgressBar(CONFIG["EPOCH"], len(train_loader), "Loss : %.3f; Total Loss : %.3f")
+
+predict = ssd_predict.SSDPredict(CONFIG["CLASSES"])
+net.train()
+
+for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCH"] + 1):
+    total_loss = 0.
+    for i, (images, targets) in enumerate(train_loader):
+        index += i
+        if epoch == 20:
+            LEARNING_RATE = 0.0005
+        if epoch == 60:
+            LEARNING_RATE = 0.00025
+        if epoch == 80:
+            LEARNING_RATE = 0.0001
+        if epoch == 100:
+            LEARNING_RATE = 0.00005
+
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = LEARNING_RATE
+
+        images = t.autograd.Variable(images.cuda() if CONFIG["USE_GPU"] else images)
+        targets = [t.autograd.Variable(ann.cuda() if CONFIG["USE_GPU"] else ann) for ann in targets]
+
+        out = net(images)
 
         optimizer.zero_grad()
 
-        out = Net(imgs)
-
         loss_l, loss_c = criterion(out, targets)
-        loss = loss_c + loss_l
+        loss = loss_l + loss_c
+        total_loss += loss.item()
         loss.backward()
         optimizer.step()
+        bar.show(epoch, loss.item(), total_loss / (i+1))
 
-        bar.show(epoch, loss.item())
+    t.save(net.state_dict(),"outputs/SSD_%03d.pth" % epoch)
 
-    torch.save(Net.state_dict(), "SSD_%3d.pth" % epoch)
-    predictImage = SSDDetection(VOC_CLASSES, sourceImagePath="../testImages/demo.jpg", targetImagePath=".", Net=Net)
-    predictImage.imageShow()
+    test_net = ssd_net.build_ssd('test', CONFIG)  # 初始化 SSD300，类别为21（20类别+1背景）
+    test_net.load_state_dict(t.load("outputs/SSD_%03d.pth" % epoch, map_location=lambda storage, loc: storage))
 
-
+    predict.predict(test_net, epoch, "testImages/demo.jpg")

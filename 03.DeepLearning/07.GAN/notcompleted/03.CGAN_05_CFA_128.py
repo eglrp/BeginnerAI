@@ -1,55 +1,52 @@
-# coding=utf-8
 import torch
 import torchvision
 
-from torch.nn import Module, ConvTranspose2d, BatchNorm2d, ReLU, Tanh, Conv2d, LeakyReLU, BCELoss, \
-    Linear,Sigmoid
-from torchvision.transforms import Compose, Resize, ToTensor, CenterCrop, Normalize
+from torch.nn import BCELoss, Module, Conv2d, ConvTranspose2d, Linear, BatchNorm2d, ReLU, LeakyReLU,Sigmoid, Tanh,DataParallel
+from torchvision.transforms import Resize, Compose,ToTensor,Normalize
 from torch.optim import Adam
 from torch.autograd import Variable
 
-from torchvision.datasets import ImageFolder
+from lib.dataset.pytorch_dataset import Cifar10DataSetForPytorch
 from lib.ProgressBar import ProgressBar
 
 CONFIG = {
+    "DATA_PATH" : "/input/JData/",
+    "EPOCHS" : 100,
     "BATCH_SIZE" : 64,
     "GPU_NUMS" : 1,
-    "EPOCHS" : 100,
-    "IMAGE_SIZE" : 96,
+    "IMAGE_SIZE" : 128,
     "IMAGE_CHANNEL" : 3,
     "NOISE_DIM" : 100,
-    "LEARNING_RATE" : 2e-3,
-    "BETAS" : (0.5, 0.999)
+    "LEARNING_RATE" : 2e-4,
+    "BETA1" : 0.5
 }
 
-'''
-生成器
-input = [BATCH_SIZE, NOISE_DIM]
-label = [BATCH_SIZE, 10]
-'''
 class Generator(Module):
     def __init__(self, feature_num=64):
         super(Generator, self).__init__()
         self.feature_num = feature_num
         self.gc_full = Linear(CONFIG["NOISE_DIM"] + 10, CONFIG["NOISE_DIM"] + 10)
-        self.deconv1 = ConvTranspose2d(CONFIG["NOISE_DIM"] + 10, feature_num * 8,
+        self.deconv1 = ConvTranspose2d(CONFIG["NOISE_DIM"] + 10, feature_num * 16,
                                        kernel_size=4, stride=1, padding=0, bias=False)
-        self.bn1 = BatchNorm2d(feature_num * 8)
+        self.bn1 = BatchNorm2d(feature_num * 16)
 
-        self.deconv2 = ConvTranspose2d(feature_num * 8, feature_num * 4,
+        self.deconv2 = ConvTranspose2d(feature_num * 16, feature_num * 8,
                                        kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn2 = BatchNorm2d(feature_num * 4)
+        self.bn2 = BatchNorm2d(feature_num * 8)
 
-        self.deconv3 = ConvTranspose2d(feature_num * 4, feature_num * 2,
+        self.deconv3 = ConvTranspose2d(feature_num * 8, feature_num * 4,
                                        kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn3 = BatchNorm2d(feature_num * 2)
+        self.bn3 = BatchNorm2d(feature_num * 4)
 
-        self.deconv4 = ConvTranspose2d(feature_num * 2, feature_num,
+        self.deconv4 = ConvTranspose2d(feature_num * 4, feature_num * 2,
                                        kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn4 = BatchNorm2d(feature_num)
+        self.bn4 = BatchNorm2d(feature_num * 2)
 
-        self.deconv5 = ConvTranspose2d(feature_num, CONFIG["IMAGE_CHANNEL"], kernel_size=5,
-                                       stride=3, padding=1, bias=False)
+        self.deconv5 = ConvTranspose2d(feature_num * 2, feature_num, kernel_size=4,
+                                       stride=2, padding=1, bias=False)
+        self.bn5 = BatchNorm2d(feature_num)
+
+        self.deconv6 = ConvTranspose2d(feature_num, CONFIG["IMAGE_CHANNEL"], kernel_size=4, stride=2, padding=1, bias=False)
     def forward(self, input, label):
         network = torch.cat([input, label], dim=1)
         network = self.gc_full(network)
@@ -71,18 +68,19 @@ class Generator(Module):
         network = ReLU()(network)
 
         network = self.deconv5(network)
+        network = self.bn5(network)
+        network = ReLU()(network)
+
+        network = self.deconv6(network)
         network = Tanh()(network)
         return network
-'''
-判别器
-input [BATCH_SIZE, 3, 96, 96]
-'''
+
 class Discriminator(Module):
     def __init__(self, features_num=64):
         super(Discriminator, self).__init__()
         self.features_num = features_num
         self.input_conv1 = Conv2d(in_channels=CONFIG["IMAGE_CHANNEL"], out_channels=features_num,
-                                  kernel_size=5, stride=3, padding=1, bias=False)
+                                  kernel_size=4, stride=2, padding=1, bias=False)
         self.input_conv2 = Conv2d(in_channels=features_num, out_channels=features_num * 2,
                                   kernel_size=4, stride=2, padding=1, bias=False)
         self.input_conv3 = Conv2d(features_num * 2, features_num * 4,
@@ -91,9 +89,12 @@ class Discriminator(Module):
         self.input_conv4 = Conv2d(features_num * 4, features_num * 8,
                                   kernel_size=4, stride=2, padding=1, bias=False)
         self.input_bn4 =  BatchNorm2d(features_num * 8)
-        self.input_conv5 = Conv2d(features_num * 8, features_num * 8, kernel_size=4, stride=1, padding=0, bias=False)
+        self.input_conv5 = Conv2d(features_num * 8, features_num * 16, kernel_size=4, stride=1, padding=1, bias=False)
+        self.input_bn5 =  BatchNorm2d(features_num * 16)
 
-        self.cat_conv1 = Linear(512 +10, 256)
+        self.input_conv6 = Conv2d(features_num * 16, features_num * 16, kernel_size=4, stride=1, padding=0, bias=False)
+
+        self.cat_conv1 = Linear(1024 +10, 256)
         self.cat_merge = Linear(256 , 1)
     def forward(self, input, label):
         network_1 = self.input_conv1(input)
@@ -107,7 +108,10 @@ class Discriminator(Module):
         network_1 = self.input_bn4(network_1)
         network_1 = LeakyReLU(negative_slope=0.2, inplace=True)(network_1)
         network_1 = self.input_conv5(network_1)
-        network_1 = network_1.view(-1, self.features_num * 8)
+        network_1 = self.input_bn5(network_1)
+        network_1 = LeakyReLU(negative_slope=0.2, inplace=True)(network_1)
+        network_1 = self.input_conv6(network_1)
+        network_1 = network_1.view(-1, self.features_num * 16)
         network= torch.cat( [ network_1 , label ], 1)
         network = self.cat_conv1(network)
         network = LeakyReLU(negative_slope=0.2, inplace=True)(network)
@@ -115,31 +119,26 @@ class Discriminator(Module):
         network = Sigmoid()(network)
 
         return network
-'''
-生成网络
-'''
-Net_G = Generator()
-Net_D = Discriminator()
+
+NetG = Generator()
+NetD = Discriminator()
 BCE_LOSS = BCELoss()
+G_optimizer = Adam(NetG.parameters(), lr=CONFIG["LEARNING_RATE"], betas=(0.5, 0.999))
+D_optimizer = Adam(NetD.parameters(), lr=CONFIG["LEARNING_RATE"], betas=(0.5, 0.999))
+
 if CONFIG["GPU_NUMS"] > 0:
-    Net_D.cuda()
-    Net_G.cuda()
+    NetG = NetG.cuda()
+    NetD = NetD.cuda()
     BCE_LOSS = BCE_LOSS.cuda()
-G_optimizer = Adam(Net_G.parameters(), lr=CONFIG["LEARNING_RATE"], betas=CONFIG["BETAS"])
-D_optimizer = Adam(Net_D.parameters(), lr=CONFIG["LEARNING_RATE"], betas=CONFIG["BETAS"])
 
-'''
-数据读入与预处理
-'''
-transforms = Compose([
-    Resize(CONFIG["IMAGE_SIZE"]),
-    CenterCrop(CONFIG["IMAGE_SIZE"]),
+transform = Compose([
+    Resize((CONFIG["IMAGE_SIZE"],CONFIG["IMAGE_SIZE"])),
     ToTensor(),
-    Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
+    Normalize(mean=[0.5]*3, std=[0.5]*3)
 ])
-
-dataset = ImageFolder(root='/input/Faces/Eyeglasses', transform=transforms)
-train_loader = torch.utils.data.DataLoader(dataset, batch_size=CONFIG["BATCH_SIZE"], shuffle=True)
+train_loader = torch.utils.data.DataLoader(
+    torchvision.datasets.ImageFolder(root=CONFIG["DATA_PATH"], transform=transform),
+    batch_size=CONFIG["BATCH_SIZE"], shuffle=True)
 
 def one_hot(target):
     y = torch.zeros(target.size()[0], 10)
@@ -154,17 +153,35 @@ Predict_Noise_var = Variable(torch.randn(100, CONFIG["NOISE_DIM"]).cuda() if CON
 temp_z_ = torch.randn(10, 100)
 fixed_z_ = temp_z_
 Predict_y = torch.zeros(10, 1)
-for i in range(1, 10):
-    fixed_z_ = torch.cat([fixed_z_, temp_z_], 0)
-    temp = torch.zeros(10, 1) + (i % 2)
-    Predict_y = torch.cat([Predict_y, temp], 0)
+
+fixed_z_ = torch.cat([fixed_z_, temp_z_], 0)
+temp = torch.ones(10, 1) + 0
+Predict_y = torch.cat([Predict_y, temp], 0)
+temp = torch.ones(10, 1) + 1
+Predict_y = torch.cat([Predict_y, temp], 0)
+
+Predict_y = torch.cat([Predict_y, torch.zeros(10, 1)], 0)
+fixed_z_ = torch.cat([fixed_z_, temp_z_], 0)
+temp = torch.ones(10, 1) + 0
+Predict_y = torch.cat([Predict_y, temp], 0)
+temp = torch.ones(10, 1) + 1
+Predict_y = torch.cat([Predict_y, temp], 0)
+
+Predict_y = torch.cat([Predict_y, torch.zeros(10, 1)], 0)
+fixed_z_ = torch.cat([fixed_z_, temp_z_], 0)
+temp = torch.ones(10, 1) + 0
+Predict_y = torch.cat([Predict_y, temp], 0)
+temp = torch.ones(10, 1) + 1
+Predict_y = torch.cat([Predict_y, temp], 0)
+
+Predict_y = torch.cat([Predict_y, torch.zeros(10, 1)], 0)
 
 Predict_y = one_hot(Predict_y.long())
 Predict_y = Variable(Predict_y.cuda() if CONFIG["GPU_NUMS"] > 0 else Predict_y)
 
 bar = ProgressBar(CONFIG["EPOCHS"], len(train_loader), "D Loss:%.3f, G Loss:%.3f")
 for epoch in range(1, CONFIG["EPOCHS"] + 1):
-    if epoch % 20 == 0:
+    if epoch % 30 == 0:
         G_optimizer.param_groups[0]['lr'] /= 10
         D_optimizer.param_groups[0]['lr'] /= 10
 
@@ -180,23 +197,23 @@ for epoch in range(1, CONFIG["EPOCHS"] + 1):
         image_var = Variable(img_real.cuda() if CONFIG["GPU_NUMS"] > 0 else img_real)
         label_var = Variable(label.cuda() if CONFIG["GPU_NUMS"] > 0 else label)
 
-        Net_D.zero_grad()
-        D_real = Net_D(image_var, label_var)
+        NetD.zero_grad()
+        D_real = NetD(image_var, label_var)
         D_real_loss = BCE_LOSS(D_real, label_true_var)
 
         Noise_var = Variable(torch.randn(mini_batch, CONFIG["NOISE_DIM"]).cuda() if CONFIG["GPU_NUMS"] > 0 else torch.randn(mini_batch, CONFIG["NOISE_DIM"]))
-        image_fake = Net_G(Noise_var, label_var)
-        D_fake = Net_D(image_fake, label_var)
+        image_fake = NetG(Noise_var, label_var)
+        D_fake = NetD(image_fake, label_var)
         D_fake_loss = BCE_LOSS(D_fake, label_false_var)
 
         D_loss = D_real_loss + D_fake_loss
         D_loss.backward()
         D_optimizer.step()
 
-        Net_G.zero_grad()
+        NetG.zero_grad()
         Noise_var = Variable(torch.randn(mini_batch, CONFIG["NOISE_DIM"]).cuda() if CONFIG["GPU_NUMS"] > 0 else torch.randn(mini_batch, CONFIG["NOISE_DIM"]))
-        image_fake = Net_G(Noise_var,label_var)
-        D_fake = Net_D(image_fake,label_var)
+        image_fake = NetG(Noise_var,label_var)
+        D_fake = NetD(image_fake,label_var)
 
         G_loss = BCE_LOSS(D_fake, label_true_var)
 
@@ -205,8 +222,7 @@ for epoch in range(1, CONFIG["EPOCHS"] + 1):
 
         bar.show(epoch, D_loss.item(), G_loss.item())
 
-    test_images = Net_G(Predict_Noise_var, Predict_y)
+    test_images = NetG(Predict_Noise_var, Predict_y)
 
-    torchvision.utils.save_image(test_images.data[:100],'outputs/Face_%03d.png' % (epoch),nrow=10,
+    torchvision.utils.save_image(test_images.data[:100],'outputs/JData_%03d.png' % (epoch),nrow=10,
                                  normalize=True,range=(-1,1), padding=0)
-

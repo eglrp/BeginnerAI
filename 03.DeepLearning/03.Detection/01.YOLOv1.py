@@ -1,25 +1,21 @@
-# coding=utf-8
-import torch
-import os
+import torch as t
+import torchvision as tv
 
-from torch.nn import Linear, DataParallel, Conv2d
-from torchvision.transforms.transforms import ToTensor
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-from torch.optim import SGD
+import lib.yolov1.model as yolo_model
+import lib.yolov1.loss as yolo_loss
+import lib.yolov1.dataset as yolo_data
+import lib.yolov1.predict as yolo_predict
 
-from lib.models.yolov1 import YOLOv1Net, YOLOv1Loss, YOLOv1Detection
-from lib.dataset.pytorch_dataset import yoloDataset
-from lib.ProgressBar import ProgressBar
+import lib.ProgressBar as j_bar
 
-YOLOv1Config = {
-    "GPU_NUMS" : 1,
+CONFIG = {
+    "USE_GPU" : t.cuda.is_available(),
     "EPOCHS" : 120,
     "IMAGE_SIZE" : 448,
     "IMAGE_CHANNEL" : 3,
     "ALPHA" : 0.1,
     "BATCH_SIZE" : 32,
-    "DATA_PATH" : "/input/",
+    "DATA_PATH" : "/input/VOC2012/JPEGImages",
     "CELL_NUMS" : 7,
     "CLASS_NUMS" : 20,
     "BOXES_EACH_CELL" : 2,
@@ -31,61 +27,63 @@ YOLOv1Config = {
                  'sofa', 'train', 'tvmonitor']
 }
 
-FROM_TRAIN_ITER = 15
+FROM_TRAIN_ITER = 1
 
-Net = YOLOv1Net(CFG=YOLOv1Config)
+Net = yolo_model.YoLoV1Net()
 
-for m in Net.modules():
-    if isinstance(m, Linear) or isinstance(m, Conv2d):
-        m.weight.data.normal_(0, 0.01)
-        m.bias.data.zero_()
+criterion = yolo_loss.YoLoV1Loss(7, 2, 5, 0.5)
 
-if YOLOv1Config["GPU_NUMS"] > 0:
-    Net = Net.cuda()
+if CONFIG["USE_GPU"]:
+    Net.cuda()
+    criterion.cuda()
 
-if YOLOv1Config["GPU_NUMS"] > 1 :
-    Net = DataParallel(Net)
+train_dataset = yolo_data.yoloDataset(root=CONFIG["DATA_PATH"],
+                                  list_file="utils/voc2012train.txt", train=True,
+                                  transform=[tv.transforms.ToTensor()])
 
-train_dataset = yoloDataset(root = os.path.join(YOLOv1Config["DATA_PATH"], "VOC2012", "JPEGImages"), list_file='utils/voc2012train.txt',
-                            train=True, transform=[ToTensor()])
-train_loader = DataLoader(train_dataset, batch_size=YOLOv1Config["BATCH_SIZE"], shuffle=True)
+train_loader = t.utils.data.DataLoader(train_dataset, batch_size=CONFIG["BATCH_SIZE"], shuffle=True)
 
-criterion = YOLOv1Loss()
 # 优化器
-optimizer = SGD(Net.parameters(), lr=YOLOv1Config["LEARNING_RATE"], momentum=0.95, weight_decay=5e-4)
-bar = ProgressBar(YOLOv1Config["EPOCHS"], len(train_loader), "Loss:%.3f", current_epoch=FROM_TRAIN_ITER)
+optimizer = t.optim.SGD(Net.parameters(), lr=CONFIG["LEARNING_RATE"],
+                        momentum=0.95, weight_decay=5e-4)
+bar = j_bar.ProgressBar(CONFIG["EPOCHS"], len(train_loader), "Loss : %.3f; Total Loss : %.3f")
 
 if FROM_TRAIN_ITER > 1:
-    Net.load_state_dict(torch.load("output/YoloV1_%d.pth" % (FROM_TRAIN_ITER - 1)))
+    Net.load_state_dict(t.load("outputs/yolov1_%03d.pth" % (FROM_TRAIN_ITER - 1)))
 
-for epoch in range(FROM_TRAIN_ITER, YOLOv1Config["EPOCHS"]):
+predict = yolo_predict.YoLoPredict(CONFIG["CLASSES"])
+for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
+    Net.train()
     if epoch == 1:
         LEARNING_RATE = 0.0005
     if epoch == 2:
         LEARNING_RATE = 0.00075
-    if epoch >= 3 and epoch < 80:
+    if epoch == 3:
         LEARNING_RATE = 0.001
-    if epoch >= 80 and epoch < 100:
+    if epoch == 80:
         LEARNING_RATE = 0.0001
     if epoch >= 100:
         LEARNING_RATE = 0.00001
     for param_group in optimizer.param_groups:
         param_group['lr'] = LEARNING_RATE
 
+    total_loss = 0.
+    # 开始训练
     for i, (images, target) in enumerate(train_loader):
-        images = Variable(images.cuda() if YOLOv1Config["GPU_NUMS"] > 0 else images)
-        target = Variable(target.cuda() if YOLOv1Config["GPU_NUMS"] > 0 else target)
-
-        optimizer.zero_grad()
+        images = t.autograd.Variable(images.cuda() if CONFIG["USE_GPU"] else images)
+        target = t.autograd.Variable(target.cuda() if CONFIG["USE_GPU"] else target)
+        if CONFIG["USE_GPU"]:
+            images, target = images.cuda(), target.cuda()
         pred = Net(images)
         loss = criterion(pred, target)
-
+        total_loss += loss.item()
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        bar.show(epoch, loss.item())
-    # 保存最新的模型
-    torch.save(Net.state_dict(),"output/YoloV1_%d.pth" % epoch)
+        bar.show(epoch, loss.item(), total_loss / (i+1))
 
-    predict = YOLOv1Detection(YOLOv1Config["CLASSES"], sourceImagePath="../testImages/demo.jpg", targetImagePath="outputs/", Net=Net)
-    predict.imageShow()
+    t.save(Net.state_dict(),"outputs/yolov1_%03d.pth" % epoch)
+
+    Net.eval()
+    predict.predict(Net, epoch, "testImages/demo.jpg")

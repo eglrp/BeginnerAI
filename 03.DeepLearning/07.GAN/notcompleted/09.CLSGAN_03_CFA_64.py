@@ -99,7 +99,7 @@ class Discriminator(t.nn.Module):
         )
 
         self.fc1 = t.nn.Sequential(
-            t.nn.Linear(128 * 8 * 8, 1024),
+            t.nn.Linear(256 * 8 * 8, 1024),
             t.nn.BatchNorm1d(1024),
             t.nn.LeakyReLU(0.2)
         )
@@ -115,7 +115,7 @@ class Discriminator(t.nn.Module):
         output = self.conv1(output)
         output = self.conv2(output)
         output = self.conv3(output)
-        output = output.view(-1, 128 * 8 * 8)
+        output = output.view(-1, 256 * 8 * 8)
         output = self.fc1(output)
         output = self.fc2(output)
 
@@ -139,30 +139,53 @@ dataset = tv.datasets.ImageFolder(root=CONFIG["DATA_PATH"], transform=tv.transfo
 ]))
 train_loader = t_data.DataLoader(dataset, batch_size=CONFIG["BATCH_SIZE"], shuffle=True)
 
+def one_hot(target):
+    y = t.zeros(target.size()[0], 10)
+
+    for i in range(target.size()[0]):
+        y[i, target[i]] = 1
+
+    return y
+
+Predict_Noise_var = t_auto.Variable(t.randn(100, CONFIG["NOISE_DIM"],1,1).cuda() if CONFIG["GPU_NUMS"] > 0 else t.randn(100, CONFIG["NOISE_DIM"],1,1))
+temp_z_ = t.randn(10, 100)
+fixed_z_ = temp_z_
+Predict_y = t.zeros(10, 1)
+
+fixed_z_ = t.cat([fixed_z_, temp_z_], 0)
+temp     = t.ones(10, 1) + 0
+Predict_y= t.cat([Predict_y, temp], 0)
+temp     = t.ones(10, 1) + 1
+Predict_y= t.cat([Predict_y, temp], 0)
+
+Predict_y= t.cat([Predict_y, t.zeros(10, 1)], 0)
+fixed_z_ = t.cat([fixed_z_, temp_z_], 0)
+temp     = t.ones(10, 1) + 0
+Predict_y= t.cat([Predict_y, temp], 0)
+temp     = t.ones(10, 1) + 1
+Predict_y= t.cat([Predict_y, temp], 0)
+
+Predict_y= t.cat([Predict_y, t.zeros(10, 1)], 0)
+fixed_z_ = t.cat([fixed_z_, temp_z_], 0)
+temp     = t.ones(10, 1) + 0
+Predict_y= t.cat([Predict_y, temp], 0)
+temp     = t.ones(10, 1) + 1
+Predict_y= t.cat([Predict_y, temp], 0)
+
+Predict_y= t.cat([Predict_y, t.zeros(10, 1)], 0)
+
+Predict_y= one_hot(Predict_y.long())
+Predict_y = Predict_y.view(-1, 10, 1,1)
+Predict_y= t_auto.Variable(Predict_y.cuda() if CONFIG["GPU_NUMS"] > 0 else Predict_y)
+
+bar = j_bar.ProgressBar(CONFIG["EPOCH"], len(train_loader), "D Loss:%.3f;G Loss:%.3f")
+
 fill = t.zeros([10, 10, CONFIG["IMAGE_SIZE"], CONFIG["IMAGE_SIZE"]])
 for i in range(10):
     fill[i, i, :, :] = 1
-
 onehot = t.zeros(10, 10)
 onehot = onehot.scatter_(1, t.LongTensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).view(10,1), 1).view(10, 10, 1, 1)
 
-temp_z_ = t.randn(10, 100)
-fixed_z_ = temp_z_
-fixed_y_ = t.zeros(10, 1)
-for i in range(9):
-    fixed_z_ = t.cat([fixed_z_, temp_z_], 0)
-    temp = t.ones(10, 1) + i
-    fixed_y_ = t.cat([fixed_y_, temp], 0)
-fixed_z_ = fixed_z_.view(-1, 100, 1, 1)
-fixed_y_label_ = t.zeros(100, 10)
-fixed_y_label_.scatter_(1, fixed_y_.type(t.LongTensor), 1)
-fixed_y_label_ = fixed_y_label_.view(-1, 10, 1, 1)
-
-with t.no_grad():
-    fixed_z_ = t_auto.Variable(fixed_z_.cuda() if CONFIG["GPU_NUMS"] > 0 else fixed_z_, volatile=True)
-    fixed_y_label_ = t_auto.Variable(fixed_y_label_.cuda() if CONFIG["GPU_NUMS"] > 0 else fixed_y_label_, volatile=True)
-
-bar = j_bar.ProgressBar(CONFIG["EPOCH"], len(train_loader), "D Loss:%.3f;G Loss:%.3f")
 NetD.train()
 for epoch in range(1, CONFIG["EPOCH"] + 1):
     NetG.train()
@@ -213,6 +236,6 @@ for epoch in range(1, CONFIG["EPOCH"] + 1):
 
         bar.show(epoch, D_train_loss.item(), G_train_loss.item())
 
-    fake_u=NetG(fixed_z_, fixed_y_label_)
-    tv.utils.save_image(fake_u.data,'outputs/Cifar10_%03d.png' % epoch,nrow=10)
+    fake_u=NetG(Predict_Noise_var, Predict_y)
+    tv.utils.save_image(fake_u.data,'outputs/CFA_%03d.png' % epoch,nrow=10)
 

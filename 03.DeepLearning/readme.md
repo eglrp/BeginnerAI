@@ -7,6 +7,15 @@
 # 2.图片分类
 
 # 3.图片识别
+PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjykQ)
+## YOLOV1
+![images](result/YOLOV1.png)
+
+## SSD
+| 图片一 | 图片二 |
+| ------ | ------ |
+| ![images](result/SSD_1.png) | ![images](result/SSD_2.png) |
+
 
 # 4.图片分割
 
@@ -15,7 +24,7 @@
 # 6.人脸识别
 
 # 7.对抗生成网络
-动画GIF图都放在[link](https://pan.baidu.com/s/1VCq1ET-RoNLYBE8Plat62g#list/path=%2FBeginnerAI%2FGAN%E7%BB%93%E6%9E%9C%E5%8A%A8%E7%94%BB&parentPath=%2FBeginnerAI)
+动画GIF图都放在[link](https://pan.baidu.com/s/1BeK1BB5OeZuAJ9k4SLq1nw)
 ## 7.1.GAN
 ![images](result/07_01_Z.gif)<br/>
 ![images](result/07_01_batman.gif)<br/>
@@ -60,9 +69,12 @@
 ### $64 \times 64$
 | 1 Epoch | 10 Epochs | 50 Epochs | 100 Epochs |
 | ------- | ------- | ------- | ------- |
-| ![images](result/07_03_CGAN_03_CAT_001.png) | ![images](result/07_03_CGAN_03_CAT_010.png) | ![images](result/07_03_CGAN_03_CAT_050.png) | ![images](result/07_03_CGAN_03_CAT_100.png) |
+| ![images](result/07_03_CGAN_03_CFA_001.png) | ![images](result/07_03_CGAN_03_CFA_010.png) | ![images](result/07_03_CGAN_03_CFA_050.png) | ![images](result/07_03_CGAN_03_CFA_100.png) |
 
 ### $96 \times 96$
+| 1 Epoch | 10 Epochs | 50 Epochs | 100 Epochs |
+| ------- | ------- | ------- | ------- |
+| ![images](result/07_03_CGAN_04_CFA_001.png) | ![images](result/07_03_CGAN_04_CFA_010.png) | ![images](result/07_03_CGAN_04_CFA_050.png) | ![images](result/07_03_CGAN_04_CFA_100.png) |
 
 ### $128 \times 128$
 

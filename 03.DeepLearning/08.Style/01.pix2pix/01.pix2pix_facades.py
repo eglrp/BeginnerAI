@@ -43,7 +43,7 @@ class Generator(t.nn.Module):
             t.nn.BatchNorm2d(self.num_filters * 8)
         )
         self.conv8 = t.nn.Sequential(
-            t.nn.Conv2d(self.num_filters * 4, self.num_filters * 8, 4, 2, 1),
+            t.nn.Conv2d(self.num_filters * 8, self.num_filters * 8, 4, 2, 1),
             t.nn.LeakyReLU(0.2, True),
         )
 
@@ -137,7 +137,7 @@ class Discriminator(t.nn.Module):
         self.conv4 = t.nn.Sequential(
             t.nn.Conv2d(self.num_filters * 4, self.num_filters * 8, 4, 1, 1),
             t.nn.LeakyReLU(0.2, True),
-            t.nn.BatchNorm2d(self.num_filters * 4)
+            t.nn.BatchNorm2d(self.num_filters * 8)
         )
         self.conv5 = t.nn.Sequential(
             t.nn.Conv2d(self.num_filters * 8, 1, 4, 1, 1),
@@ -176,12 +176,6 @@ if CONFIG["GPU_NUM"] > 0:
     L1_loss = L1_loss.cuda()
 G_optimizer = t_optim.Adam(Net_G.parameters(), lr=0.0002, betas=(0.5, 0.999))
 D_optimizer = t_optim.Adam(Net_D.parameters(), lr=0.0002, betas=(0.5, 0.999))
-
-'''
-读入数据
-'''
-if not os.path.exists("output"):
-    os.mkdir("output")
 
 train_set = j_data.DataSetFromFolderForPix2Pix(os.path.join("/input/facades_fixed", "train"))
 test_set  = j_data.DataSetFromFolderForPix2Pix(os.path.join("/input/facades_fixed", "test"))
