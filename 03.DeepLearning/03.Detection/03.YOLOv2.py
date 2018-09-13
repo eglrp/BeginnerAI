@@ -11,7 +11,7 @@ CONFIG = {
     "USE_CUDA" : t.cuda.is_available(),
     "NET_CONFIG" : "utils/yolov2_voc.cfg",
     "WEIGHT_FILE" : "utils/darknet19_448.conv.23",
-    "TRAIN_LIST_FILE" : "utils/yolo2_train.txt",
+    "TRAIN_LIST_FILE" : "utils/2012_trainval.txt",
     "EPOCHS" : 120,
     "CLASSES" : (  # always index 0
         'aeroplane', 'bicycle', 'bird', 'boat',
@@ -20,13 +20,14 @@ CONFIG = {
         'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor')
 }
-FROM_TRAIN_ITER = 16
+FROM_TRAIN_ITER = 75
 
 seed = int(time.time())
 t.manual_seed(seed)
 
 if CONFIG["USE_CUDA"]:
     t.cuda.manual_seed(seed)
+    t.backends.cudnn.benchmark = True
 
 net_options = yolo_utils.ConfigUtils.parse_cfg(CONFIG["NET_CONFIG"])[0]
 
@@ -36,7 +37,7 @@ nsamples = yolo_utils.ConfigUtils.file_lines(CONFIG["TRAIN_LIST_FILE"])
 model = yolo_net.Darknet(CONFIG["NET_CONFIG"])
 region_loss = model.loss
 model.load_weights(CONFIG["WEIGHT_FILE"])
-model.print_network()
+# model.print_network()
 
 region_loss.seen = model.seen
 processed_batches = model.seen / BATCH_SIZE
@@ -95,15 +96,28 @@ predict = yolo_predict.YoloV2Predict(CONFIG["CLASSES"])
 
 if FROM_TRAIN_ITER > 1:
     model.load_state_dict(t.load("outputs/YOLOV2_%03d.pth" % (FROM_TRAIN_ITER - 1)))
-
+LEARNING_RATE = learning_rate / BATCH_SIZE
 bar = j_bar.ProgressBar(CONFIG["EPOCHS"], len(train_loader), "Loss:%.3f;Avg Loss:%.3f")
 for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
+    t.cuda.empty_cache()
     lr = adjust_learning_rate(optimizer, processed_batches)
     model.train()
     total_loss = 0
+    # if epoch >= 20:
+    #     LEARNING_RATE = 0.001 / BATCH_SIZE
+    # if epoch >= 40:
+    #     LEARNING_RATE = 0.0008 / BATCH_SIZE
+    # if epoch >= 80:
+    #     LEARNING_RATE = 0.0005 / BATCH_SIZE
+    # if epoch >= 100:
+    #     LEARNING_RATE = 0.00007 / BATCH_SIZE
+
+    # for param_group in optimizer.param_groups:
+    #     param_group['lr'] = LEARNING_RATE
+
     for batch_idx, (data, target) in enumerate(train_loader):
-        adjust_learning_rate(optimizer, processed_batches)
-        processed_batches = processed_batches + 1
+        # adjust_learning_rate(optimizer, processed_batches)
+        # processed_batches = processed_batches + 1
 
         data   = t.autograd.Variable(data.cuda() if CONFIG["USE_CUDA"] else data)
         target = t.autograd.Variable(target if CONFIG["USE_CUDA"] else target)
@@ -121,4 +135,4 @@ for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
 
     t.save(model.state_dict(), "outputs/YOLOV2_%03d.pth" % epoch)
     model.eval()
-    predict.predict(model, epoch, "testImages/demo.jpg")
+    predict.predict(model, epoch, "testImages/demo.jpg", "demo")

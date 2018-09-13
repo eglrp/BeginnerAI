@@ -15,7 +15,7 @@ import lib.ProgressBar as j_bar
 
 CONFIG = {
     "USE_GPU" : t.cuda.is_available(),
-    "DATA_PATH" : "/input",
+    "DATA_PATH" : "/input/VOC/",
     "IMAGE_SIZE" : 300,
     "IMAGE_CHANNEL" : 3,
     "EPOCH" : 120,
@@ -73,8 +73,7 @@ if CONFIG["USE_GPU"]:
 else:
     t.set_default_tensor_type('torch.FloatTensor')
 
-dataset = ssd_data.VOCDetection(root=CONFIG["DATA_PATH"],image_sets=[('2012', 'trainval')],
-                              transform=ssd_aug.SSDAugmentation(CONFIG["IMAGE_SIZE"],CONFIG["MEANS"]),
+dataset = ssd_data.VOCDetection(transform=ssd_aug.SSDAugmentation(CONFIG["IMAGE_SIZE"],CONFIG["MEANS"]),
                               target_transform=ssd_data.VOCAnnotationTransform(CONFIG["CLASSES"]))
 
 net = ssd_net.build_ssd("train", CONFIG)
@@ -143,4 +142,4 @@ for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCH"] + 1):
     test_net = ssd_net.build_ssd('test', CONFIG)  # 初始化 SSD300，类别为21（20类别+1背景）
     test_net.load_state_dict(t.load("outputs/SSD_%03d.pth" % epoch, map_location=lambda storage, loc: storage))
 
-    predict.predict(test_net, epoch, "testImages/demo.jpg")
+    predict.predict(test_net, epoch, "testImages/demo.jpg", "demo")

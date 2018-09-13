@@ -14,14 +14,17 @@ CONFIG = {
     "IMAGE_SIZE" : 448,
     "IMAGE_CHANNEL" : 3,
     "ALPHA" : 0.1,
-    "BATCH_SIZE" : 32,
-    "DATA_PATH" : "/input/VOC2012/JPEGImages",
+    "BATCH_SIZE" : 16,
+    "DATA_PATH" : "/input/VOC/JPEGImages",
+    "IMAGE_LIST_FILE" : "utils/voctrain.txt",
     "CELL_NUMS" : 7,
     "CLASS_NUMS" : 20,
     "BOXES_EACH_CELL" : 2,
     "LEARNING_RATE" : 0.001,
     "L_COORD" : 5,
     "L_NOOBJ" : 0.5,
+    "CELL_NUMS" : 7,
+    "EACH_CELL_BOXES" : 2,
     "CLASSES" : ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair',
                  'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep',
                  'sofa', 'train', 'tvmonitor']
@@ -29,16 +32,15 @@ CONFIG = {
 
 FROM_TRAIN_ITER = 1
 
-Net = yolo_model.YoLoV1Net()
-
-criterion = yolo_loss.YoLoV1Loss(7, 2, 5, 0.5)
+Net = yolo_model.YoLoV1Net(CONFIG)
+print(Net)
+criterion = yolo_loss.YoLoV1Loss(CONFIG)
 
 if CONFIG["USE_GPU"]:
     Net.cuda()
     criterion.cuda()
 
-train_dataset = yolo_data.yoloDataset(root=CONFIG["DATA_PATH"],
-                                  list_file="utils/voc2012train.txt", train=True,
+train_dataset = yolo_data.yoloDataset(CONFIG, train=True,
                                   transform=[tv.transforms.ToTensor()])
 
 train_loader = t.utils.data.DataLoader(train_dataset, batch_size=CONFIG["BATCH_SIZE"], shuffle=True)

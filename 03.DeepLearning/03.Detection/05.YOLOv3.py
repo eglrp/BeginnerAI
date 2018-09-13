@@ -1,11 +1,11 @@
-import lib.yolo3.utils as yolo_utils
-import lib.yolo3.net as yolo_net
+import lib.yolov3.utils as yolo_utils
+import lib.yolov3.net as yolo_net
 import torch
 import time
 import lib.ProgressBar as j_bar
-import lib.yolo3.dataset as yolo_data
+import lib.yolov3.dataset as yolo_data
 import torchvision
-import lib.yolo3.predict as yolo_predict
+import lib.yolov3.predict as yolo_predict
 CONFIG = {
     "DATA_CONFIG_FILE" : "utils/voc.data",
     "CONFIG_FILE" : "utils/yolo_v3.cfg",
@@ -19,7 +19,7 @@ CONFIG = {
         'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor')
 }
-FROM_TRAIN_ITER = 4
+FROM_TRAIN_ITER = 50
 data_options  = yolo_utils.LoadUtils.read_data_cfg(CONFIG["DATA_CONFIG_FILE"])
 net_options   = yolo_utils.LoadUtils.parse_cfg(CONFIG["CONFIG_FILE"])[0]
 weightfile = CONFIG["WEIGHTS_FILE"]
@@ -77,6 +77,7 @@ def adjust_learning_rate(optimizer, batch):
     for i in range(len(steps)):
         scale = scales[i] if i < len(scales) else 1
         if batch >= steps[i]:
+            print("learning rate down")
             lr = lr * scale
             if batch == steps[i]:
                 break
@@ -94,6 +95,7 @@ bar = j_bar.ProgressBar(max_epochs, len(train_loader), "Loss:%.3f;Total Loss:%.3
 for epoch in range(FROM_TRAIN_ITER, max_epochs + 1):
     model.train()
     total_loss = 0
+    torch.cuda.empty_cache()
     for batch_idx, (data, target) in enumerate(train_loader):
         processed_batches = model.seen//batch_size
 
@@ -122,4 +124,4 @@ for epoch in range(FROM_TRAIN_ITER, max_epochs + 1):
     torch.save(model.state_dict(), "outputs/YOLOV3_%03d.pth" % epoch)
 
     model.eval()
-    predict.predict(model, epoch, "testImages/demo.jpg")
+    predict.predict(model, epoch, "testImages/03.jpg", "demo")

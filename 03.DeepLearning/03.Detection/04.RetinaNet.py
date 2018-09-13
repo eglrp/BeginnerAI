@@ -52,6 +52,7 @@ bar = j_bar.ProgressBar(CONFIG["EPOCHS"], len(trainloader), "Loss:%.3f;Total Los
 for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     net.train()
     total_loss = 0
+    torch.cuda.empty_cache()
     for batch_idx, (inputs, loc_targets, cls_targets) in enumerate(trainloader):
         inputs      = torch.autograd.Variable(inputs.cuda() if torch.cuda.is_available() else inputs)
         loc_targets = torch.autograd.Variable(loc_targets.cuda() if torch.cuda.is_available() else loc_targets)
@@ -70,4 +71,4 @@ for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     torch.save(net.state_dict(), "outputs/RetinaNet_%03d.pth" % epoch)
 
     net.eval()
-    predict.predict(net, epoch, "testImages/demo.jpg")
+    predict.predict(net, epoch, "testImages/demo.jpg", "demo")
