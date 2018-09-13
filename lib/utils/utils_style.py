@@ -18,7 +18,7 @@ def plot_test_result(input, target, gen_image, epoch, training=True, save=False,
     plt.subplots_adjust(wspace=0, hspace=0)
 
     if training:
-        title = 'Epoch {0}'.format(epoch + 1)
+        title = 'Epoch {0}'.format(epoch)
         fig.text(0.5, 0.04, title, ha='center')
 
     # save figure
@@ -26,9 +26,9 @@ def plot_test_result(input, target, gen_image, epoch, training=True, save=False,
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         if training:
-            save_fn = save_dir + 'Result_epoch_{:d}'.format(epoch+1) + '.png'
+            save_fn = save_dir + 'Result_epoch_%03d' % (epoch) + '.png'
         else:
-            save_fn = save_dir + 'Test_result_{:d}'.format(epoch+1) + '.png'
+            save_fn = save_dir + 'Test_result_%03d' % (epoch) + '.png'
             fig.subplots_adjust(bottom=0)
             fig.subplots_adjust(top=1)
             fig.subplots_adjust(right=1)

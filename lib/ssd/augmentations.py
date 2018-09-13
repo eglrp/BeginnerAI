@@ -1,31 +1,35 @@
-import numpy as np
-import cv2
 import torch
-import colorsys
-import os
-
+from torchvision import transforms
+import cv2
+import numpy as np
+import types
 from numpy import random
-from lib.utils.functions import jaccard_numpy
 
-class Augmentation(object):
-    def __init__(self, size=300, mean=(104, 117, 123), scale=False):
-        self.mean = mean
-        self.size = size
-        self.augment = Compose([
-            ConvertFromInts(),
-            ToAbsoluteCoords(),
-            PhotometricDistort(),
-            Expand(self.mean),
-            RandomSampleCrop(),
-            RandomMirror(),
-            ToPercentCoords(),
-            Resize(self.size),
-            SubtractMeans(self.mean),
-            Norm() if scale else None
-        ])
+def intersect(box_a, box_b):
+    max_xy = np.minimum(box_a[:, 2:], box_b[2:])
+    min_xy = np.maximum(box_a[:, :2], box_b[:2])
+    inter = np.clip((max_xy - min_xy), a_min=0, a_max=np.inf)
+    return inter[:, 0] * inter[:, 1]
 
-    def __call__(self, img, boxes, labels):
-        return self.augment(img, boxes, labels)
+def jaccard_numpy(box_a, box_b):
+    """Compute the jaccard overlap of two sets of boxes.  The jaccard overlap
+    is simply the intersection over union of two boxes.
+    E.g.:
+        A ∩ B / A ∪ B = A ∩ B / (area(A) + area(B) - A ∩ B)
+    Args:
+        box_a: Multiple bounding boxes, Shape: [num_boxes,4]
+        box_b: Single bounding box, Shape: [4]
+    Return:
+        jaccard overlap: Shape: [box_a.shape[0], box_a.shape[1]]
+    """
+    inter = intersect(box_a, box_b)
+    area_a = ((box_a[:, 2]-box_a[:, 0]) *
+              (box_a[:, 3]-box_a[:, 1]))  # [A,B]
+    area_b = ((box_b[2]-box_b[0]) *
+              (box_b[3]-box_b[1]))  # [A,B]
+    union = area_a + area_b - inter
+    return inter / union  # [A,B]
+
 
 class Compose(object):
     """Composes several augmentations together.
@@ -43,13 +47,25 @@ class Compose(object):
 
     def __call__(self, img, boxes=None, labels=None):
         for t in self.transforms:
-            if t is not None:
-                img, boxes, labels = t(img, boxes, labels)
+            img, boxes, labels = t(img, boxes, labels)
         return img, boxes, labels
+
+
+class Lambda(object):
+    """Applies a lambda as a transform."""
+
+    def __init__(self, lambd):
+        assert isinstance(lambd, types.LambdaType)
+        self.lambd = lambd
+
+    def __call__(self, img, boxes=None, labels=None):
+        return self.lambd(img, boxes, labels)
+
 
 class ConvertFromInts(object):
     def __call__(self, image, boxes=None, labels=None):
         return image.astype(np.float32), boxes, labels
+
 
 class SubtractMeans(object):
     def __init__(self, mean):
@@ -59,6 +75,7 @@ class SubtractMeans(object):
         image = image.astype(np.float32)
         image -= self.mean
         return image.astype(np.float32), boxes, labels
+
 
 class ToAbsoluteCoords(object):
     def __call__(self, image, boxes=None, labels=None):
@@ -70,6 +87,7 @@ class ToAbsoluteCoords(object):
 
         return image, boxes, labels
 
+
 class ToPercentCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
@@ -80,6 +98,7 @@ class ToPercentCoords(object):
 
         return image, boxes, labels
 
+
 class Resize(object):
     def __init__(self, size=300):
         self.size = size
@@ -89,13 +108,6 @@ class Resize(object):
                                    self.size))
         return image, boxes, labels
 
-class Norm(object):
-    def __init__(self, scale=255):
-        self.scale = scale
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = image / self.scale
-        return image, boxes, labels
 
 class RandomSaturation(object):
     def __init__(self, lower=0.5, upper=1.5):
@@ -110,9 +122,10 @@ class RandomSaturation(object):
 
         return image, boxes, labels
 
+
 class RandomHue(object):
     def __init__(self, delta=18.0):
-        assert 360.0 >= delta >= 0.0
+        assert delta >= 0.0 and delta <= 360.0
         self.delta = delta
 
     def __call__(self, image, boxes=None, labels=None):
@@ -121,6 +134,7 @@ class RandomHue(object):
             image[:, :, 0][image[:, :, 0] > 360.0] -= 360.0
             image[:, :, 0][image[:, :, 0] < 0.0] += 360.0
         return image, boxes, labels
+
 
 class RandomLightingNoise(object):
     def __init__(self):
@@ -134,6 +148,7 @@ class RandomLightingNoise(object):
             shuffle = SwapChannels(swap)  # shuffle channels
             image = shuffle(image)
         return image, boxes, labels
+
 
 class ConvertColor(object):
     def __init__(self, current='BGR', transform='HSV'):
@@ -149,6 +164,7 @@ class ConvertColor(object):
             raise NotImplementedError
         return image, boxes, labels
 
+
 class RandomContrast(object):
     def __init__(self, lower=0.5, upper=1.5):
         self.lower = lower
@@ -163,6 +179,7 @@ class RandomContrast(object):
             image *= alpha
         return image, boxes, labels
 
+
 class RandomBrightness(object):
     def __init__(self, delta=32):
         assert delta >= 0.0
@@ -175,13 +192,16 @@ class RandomBrightness(object):
             image += delta
         return image, boxes, labels
 
+
 class ToCV2Image(object):
     def __call__(self, tensor, boxes=None, labels=None):
         return tensor.cpu().numpy().astype(np.float32).transpose((1, 2, 0)), boxes, labels
 
+
 class ToTensor(object):
     def __call__(self, cvimage, boxes=None, labels=None):
         return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), boxes, labels
+
 
 class RandomSampleCrop(object):
     """Crop
@@ -196,7 +216,6 @@ class RandomSampleCrop(object):
             boxes (Tensor): the adjusted bounding boxes in pt form
             labels (Tensor): the class labels for each bbox
     """
-
     def __init__(self):
         self.sample_options = (
             # using entire original input image
@@ -239,7 +258,7 @@ class RandomSampleCrop(object):
                 top = random.uniform(height - h)
 
                 # convert to integer rect x1,y1,x2,y2
-                rect = np.array([int(left), int(top), int(left + w), int(top + h)])
+                rect = np.array([int(left), int(top), int(left+w), int(top+h)])
 
                 # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
                 overlap = jaccard_numpy(boxes, rect)
@@ -287,6 +306,7 @@ class RandomSampleCrop(object):
 
                 return current_image, current_boxes, current_labels
 
+
 class Expand(object):
     def __init__(self, mean):
         self.mean = mean
@@ -297,11 +317,11 @@ class Expand(object):
 
         height, width, depth = image.shape
         ratio = random.uniform(1, 4)
-        left = random.uniform(0, width * ratio - width)
-        top = random.uniform(0, height * ratio - height)
+        left = random.uniform(0, width*ratio - width)
+        top = random.uniform(0, height*ratio - height)
 
         expand_image = np.zeros(
-            (int(height * ratio), int(width * ratio), depth),
+            (int(height*ratio), int(width*ratio), depth),
             dtype=image.dtype)
         expand_image[:, :, :] = self.mean
         expand_image[int(top):int(top + height),
@@ -314,6 +334,7 @@ class Expand(object):
 
         return image, boxes, labels
 
+
 class RandomMirror(object):
     def __call__(self, image, boxes, classes):
         _, width, _ = image.shape
@@ -322,6 +343,7 @@ class RandomMirror(object):
             boxes = boxes.copy()
             boxes[:, 0::2] = width - boxes[:, 2::-2]
         return image, boxes, classes
+
 
 class SwapChannels(object):
     """Transforms a tensorized image by swapping the channels in the order
@@ -348,6 +370,7 @@ class SwapChannels(object):
         image = image[:, :, self.swaps]
         return image
 
+
 class PhotometricDistort(object):
     def __init__(self):
         self.pd = [
@@ -371,106 +394,22 @@ class PhotometricDistort(object):
         im, boxes, labels = distort(im, boxes, labels)
         return self.rand_light_noise(im, boxes, labels)
 
-class AnnotationTransform(object):
-    def __init__(self, classes, class_to_ind=None, keep_difficult=False,):
-        self.class_to_ind = class_to_ind or dict(zip(classes, range(len(classes))))
-        self.keep_difficult = keep_difficult
 
-    def __call__(self, target, width, height):
-        res = []
-        for obj in target.iter('object'):
-            difficult = int(obj.find('difficult').text) == 1
-            if not self.keep_difficult and difficult:
-                continue
-            name = obj.find('name').text.lower().strip()
-            bbox = obj.find('bndbox')
-
-            pts = ['xmin', 'ymin', 'xmax', 'ymax']
-            bndbox = []
-            for i, pt in enumerate(pts):
-                cur_pt = int(bbox.find(pt).text) - 1
-                cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
-                bndbox.append(cur_pt)
-            label_idx = self.class_to_ind[name]
-            bndbox.append(label_idx)
-            res += [bndbox]  # each elem: [xmin, ymin, xmax, ymax, label_ind]
-        return res
-
-class Norm(object):
-    def __init__(self, scale=255):
-        self.scale = scale
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = image / self.scale
-        return image, boxes, labels
-
-class BaseTransform(object):
-    def __init__(self, size=300, mean=(104, 117, 123), scale=False):
+class SSDAugmentation(object):
+    def __init__(self, size=300, mean=(104, 117, 123)):
+        self.mean = mean
         self.size = size
-        self.mean = np.array(mean, dtype=np.float32)
-        self.scale = scale
+        self.augment = Compose([
+            ConvertFromInts(),
+            ToAbsoluteCoords(),
+            PhotometricDistort(),
+            Expand(self.mean),
+            RandomSampleCrop(),
+            RandomMirror(), # 随机镜像
+            ToPercentCoords(),
+            Resize(self.size),
+            SubtractMeans(self.mean)
+        ])
 
-    def __call__(self, image, boxes=None, labels=None):
-        image = cv2.resize(image, (self.size, self.size)).astype(np.float32)
-        image -= self.mean
-        image = image / 255.0 if self.scale else image
-        return image, boxes, labels
-
-class DetectionImage(object):
-    def __init__(self, CLASS, sourceImagePath, targetImagePath, Net):
-        self.sourceImagePath = sourceImagePath
-        self.targetImagePath = targetImagePath
-        self.net = Net
-        self.net.eval()
-
-        self.isfolder = os.path.isdir(sourceImagePath)
-        self.fileList = []
-        self.sourceFolder = ""
-
-        self.CLASSES = CLASS
-        self.class_num = len(self.CLASSES)
-        hsv_tuples = [(x / self.class_num, 1., 1.) for x in range(self.class_num)]
-        self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-        self.colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), self.colors))
-
-    def imageShow(self):
-        self._loadFile()
-        for file in self.fileList:
-            filepath = os.path.join(self.sourceFolder, file)
-            image_orignal = cv2.imread(filepath)
-            b,g,r=cv2.split(image_orignal)
-            image_orignal=cv2.merge([r,g,b])
-            x = self._transfer_image(image_orignal)
-            with torch.no_grad():
-                y = self.net(x)
-            r,g,b=cv2.split(image_orignal)
-            image_orignal=cv2.merge([b,g,r])
-            image_orignal = self._draw_box(image_orignal, y, file)
-            cv2.imwrite(os.path.join(self.targetImagePath, file), image_orignal)
-
-    def _loadFile(self):
-        if self.isfolder:
-            filelist = os.listdir(self.sourceImagePath)
-            for file in filelist:
-                self.fileList.append(file)
-            self.sourceFolder = self.sourceImagePath
-        else:
-            (filepath,tempfilename) = os.path.split(self.sourceImagePath)
-
-            self.fileList.append(tempfilename)
-            self.sourceFolder = filepath
-
-    def _draw_box_ex(self, image, label, box, c):
-        h, w = image.shape[:2]
-        thickness = (w + h) // 300
-        left, top, right, bottom = box
-        top, left = max(0, np.round(top).astype('int32')), max(0, np.round(left).astype('int32'))
-        right, bottom = min(w, np.round(right).astype('int32')), min(h, np.round(bottom).astype('int32'))
-        cv2.rectangle(image, (left, top), (right, bottom), self.colors[c], thickness)
-        cv2.putText(image, label, (left, top - 5), 0, 0.5, self.colors[c], 1)
-
-    def _transfer_image(self, image_orignal):
-        pass
-
-    def _draw_box(self, image_orignal, image_predict, filename):
-        pass
+    def __call__(self, img, boxes, labels):
+        return self.augment(img, boxes, labels)
