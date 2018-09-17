@@ -19,7 +19,7 @@ PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjyk
 ## YOLOV2
 | 图片一 | 图片二 |
 | ------ | ------ |
-| ![images](result/YOLO2_01.png) | ![images](result/YOLO2_02.png) |
+| ![images](result/YOLOV2_01.png) | ![images](result/YOLOV2_02.png) |
 
 ## RetinaNet
 
