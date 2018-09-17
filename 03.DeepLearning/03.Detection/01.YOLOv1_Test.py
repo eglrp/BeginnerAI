@@ -3,7 +3,7 @@ import lib.yolov1.model as yolo_net
 import lib.detection.test as yolo_test
 import torch as t
 import os
-PHRASE = "Test" # "Test"
+import tqdm
 CONFIG = {
     "USE_GPU" : t.cuda.is_available(),
     "EPOCHS" : 120,
@@ -26,8 +26,10 @@ CONFIG = {
                  'sofa', 'train', 'tvmonitor']
 }
 
+PHRASE = "Predict" # "Test"
+modelpath = "results/YOLOV1.pth"
 model = yolo_net.YoLoV1Net(CONFIG)
-stc = t.load("results/YOLOV1.pth", map_location={'cuda:0': 'cpu'})
+stc = t.load(modelpath) if t.cuda.is_available() else t.load(modelpath, map_location={'cuda:0': 'cpu'})
 stc = dict(stc)
 aa = dict()
 for key,value in stc.items():
@@ -43,9 +45,12 @@ predict = yolo_predict.YoLoPredict(CONFIG["CLASSES"])
 model.eval()
 
 if PHRASE == "Predict":
-
-    for file in ["demo", "dog", "eagle", "giraffe", "horses", "maskrcnn", "person"]:
-        predict.predict(model, 0, os.path.join("../testImages","%s.jpg" % file), file, targetPath="results/")
+    path = os.path.join("testImages")
+    listfile = os.listdir(path)
+    for file in tqdm.tqdm(listfile):
+        if file.endswith("jpg"):
+            filename = file.split(".")[0]
+            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="results/")
 else:
     TestObj = yolo_test.Detection_Test()
     print(TestObj.calculateMAP(model, predict))

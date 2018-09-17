@@ -11,11 +11,11 @@ import lib.ProgressBar as j_bar
 import lib.retinanet.predict as rn_predict
 CONFIG = {
     "LEARNING_RATE" : 1e-3,
-    "DATA_FOLDER" : os.path.join("/input", "VOC2012", "JPEGImages"),
+    "DATA_FOLDER" : os.path.join("/input", "VOC", "JPEGImages"),
     "IMAGE_SIZE" : 600,
     "BATCH_SIZE" : 16,
     "USE_GPU" : torch.cuda.is_available(),
-    "EPOCHS" : 120,
+    "EPOCHS" : 300,
     "CLASSES" : (  # always index 0
         'aeroplane', 'bicycle', 'bird', 'boat',
         'bottle', 'bus', 'car', 'cat', 'chair',
@@ -30,7 +30,7 @@ transform = torchvision.transforms.Compose([
 ])
 
 trainset = rn_data.ListDataset(root=CONFIG["DATA_FOLDER"],
-                       list_file='utils/retinanet_voc_2012.txt', train=True, transform=transform,
+                       list_file='utils/voctrain.txt', train=True, transform=transform,
                        input_size=CONFIG["IMAGE_SIZE"])
 
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=CONFIG["BATCH_SIZE"], shuffle=True,

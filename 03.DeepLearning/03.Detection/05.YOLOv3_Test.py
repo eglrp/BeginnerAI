@@ -30,7 +30,7 @@ predict = yolo_predict.YoloV3Predict((  # always index 0
 model.eval()
 
 if PHRASE == "Predict":
-    path = os.path.join("../testImages")
+    path = os.path.join("testImages")
     listfile = os.listdir(path)
     for file in tqdm.tqdm(listfile):
         if file.endswith("jpg"):

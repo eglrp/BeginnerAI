@@ -7,12 +7,17 @@ import lib.yolov2.predict as yolo_predict
 import time
 import torchvision as tv
 
+import cv2
+
+import lib.utils.logger as logger
+
 CONFIG = {
     "USE_CUDA" : t.cuda.is_available(),
     "NET_CONFIG" : "utils/yolov2_voc.cfg",
     "WEIGHT_FILE" : "utils/darknet19_448.conv.23",
     "TRAIN_LIST_FILE" : "utils/2012_trainval.txt",
-    "EPOCHS" : 120,
+    "EPOCHS" : 300,
+    "LOG_DIR" : "logs/",
     "CLASSES" : (  # always index 0
         'aeroplane', 'bicycle', 'bird', 'boat',
         'bottle', 'bus', 'car', 'cat', 'chair',
@@ -20,7 +25,7 @@ CONFIG = {
         'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor')
 }
-FROM_TRAIN_ITER = 75
+FROM_TRAIN_ITER = 128
 
 seed = int(time.time())
 t.manual_seed(seed)
@@ -98,22 +103,23 @@ if FROM_TRAIN_ITER > 1:
     model.load_state_dict(t.load("outputs/YOLOV2_%03d.pth" % (FROM_TRAIN_ITER - 1)))
 LEARNING_RATE = learning_rate / BATCH_SIZE
 bar = j_bar.ProgressBar(CONFIG["EPOCHS"], len(train_loader), "Loss:%.3f;Avg Loss:%.3f")
+log = logger.Logger(CONFIG["LOG_DIR"])
 for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     t.cuda.empty_cache()
     lr = adjust_learning_rate(optimizer, processed_batches)
     model.train()
     total_loss = 0
-    # if epoch >= 20:
-    #     LEARNING_RATE = 0.001 / BATCH_SIZE
-    # if epoch >= 40:
-    #     LEARNING_RATE = 0.0008 / BATCH_SIZE
-    # if epoch >= 80:
-    #     LEARNING_RATE = 0.0005 / BATCH_SIZE
-    # if epoch >= 100:
-    #     LEARNING_RATE = 0.00007 / BATCH_SIZE
+    if epoch >= 30:
+        LEARNING_RATE = 0.001 / BATCH_SIZE
+    if epoch >= 60:
+        LEARNING_RATE = 0.0008 / BATCH_SIZE
+    if epoch >= 90:
+        LEARNING_RATE = 0.001 / BATCH_SIZE
+    if epoch >= 120:
+        LEARNING_RATE = 0.00007 / BATCH_SIZE
 
-    # for param_group in optimizer.param_groups:
-    #     param_group['lr'] = LEARNING_RATE
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = LEARNING_RATE
 
     for batch_idx, (data, target) in enumerate(train_loader):
         # adjust_learning_rate(optimizer, processed_batches)
@@ -135,4 +141,13 @@ for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
 
     t.save(model.state_dict(), "outputs/YOLOV2_%03d.pth" % epoch)
     model.eval()
-    predict.predict(model, epoch, "testImages/demo.jpg", "demo")
+    image = predict.predict(model, epoch, "testImages/01.jpg", "demo")
+    image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+    info = {'loss': total_loss / (batch_idx+1)}
+
+    for tag, value in info.items():
+        log.scalar_summary(tag, value, epoch)
+
+    imageInfo = {'images': image}
+    for tag, value in imageInfo.items():
+        log.image_summary(tag, value, epoch)

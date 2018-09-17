@@ -2,6 +2,7 @@ import lib.yolov2.predict as yolo_predict
 import lib.yolov2.net as yolo_net
 import torch as t
 import os
+import tqdm
 PHRASE = "Predict" # "Test"
 
 model = yolo_net.Darknet("utils/yolov2_voc.cfg")
@@ -17,15 +18,21 @@ model.load_state_dict(aa)
 if t.cuda.is_available():
     model = model.cuda()
 
+predict = yolo_predict.YoloV2Predict((  # always index 0
+    'aeroplane', 'bicycle', 'bird', 'boat',
+    'bottle', 'bus', 'car', 'cat', 'chair',
+    'cow', 'diningtable', 'dog', 'horse',
+    'motorbike', 'person', 'pottedplant',
+    'sheep', 'sofa', 'train', 'tvmonitor'))
+model.eval()
+
 if PHRASE == "Predict":
-    predict = yolo_predict.YoloV2Predict((  # always index 0
-        'aeroplane', 'bicycle', 'bird', 'boat',
-        'bottle', 'bus', 'car', 'cat', 'chair',
-        'cow', 'diningtable', 'dog', 'horse',
-        'motorbike', 'person', 'pottedplant',
-        'sheep', 'sofa', 'train', 'tvmonitor'))
-    model.eval()
-    for file in ["demo", "dog", "eagle", "giraffe", "horses", "maskrcnn", "person"]:
-        predict.predict(model, 0, os.path.join("../testImages","%s.jpg" % file), file, targetPath="results/")
+
+    path = os.path.join("testImages")
+    listfile = os.listdir(path)
+    for file in tqdm.tqdm(listfile):
+        if file.endswith("jpg"):
+            filename = file.split(".")[0]
+            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="results/")
 else:
     pass
