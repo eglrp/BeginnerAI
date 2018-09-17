@@ -56,7 +56,7 @@ class SSDPredict(object):
             cv2.putText(image, label, (int(p1[0]), int(p1[1] + baseline)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, 8)
 
         cv2.imwrite('%s/SSD_%s_%03d.png' % (targetPath,name, epoch),image)
-
+        return image
     def _get_resultbox(self, detections, scale):
         result_box = []
         for i in range(detections.size(1)):

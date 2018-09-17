@@ -55,6 +55,7 @@ class YoloV3Predict(object):
                 cv2.putText(img, label, (p1[0], p1[1] + baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, 8)
 
         cv2.imwrite('%s/YOLOV3_%s_%03d.png' % (targetPath, name, epoch),img)
+        return img
     def _nms(self, boxes, nms_thresh):
         if len(boxes) == 0:
             return boxes

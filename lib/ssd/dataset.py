@@ -58,9 +58,12 @@ class VOCDetection(data.Dataset):
         self.transform = transform   #SSDAugmentation(cfg['min_dim'],MEANS))  图像增强
         self.target_transform = target_transform   #VOCAnnotationTransform()  注释变换
 
-        self.ids = list()   #图像的id全部保存在ids
+        with open(file) as f:
+            lines  = f.readlines()
 
-        self.img_ids = open(file).read().strip().split()
+        self.img_ids = list()
+        for line in lines:
+            self.img_ids.append(line)
 
     def __getitem__(self, index):
         '''
@@ -71,7 +74,7 @@ class VOCDetection(data.Dataset):
         return im, gt
 
     def __len__(self):
-        return len(self.ids)
+        return 7000#len(self.img_ids)
 
     def pull_item(self, index):
         '''
@@ -79,12 +82,12 @@ class VOCDetection(data.Dataset):
         :param index: 取第几条数据
         :return: 一张图像、对应的真值框、高、宽
         '''
-        img_id = self.ids[index]
+        img_id = self.img_ids[index]
         splited = img_id.strip().split()
         img = cv2.imread(os.path.join(self.root, "JPEGImages", splited[0]))
         height, width, channels = img.shape # 得到图像的高、宽、通道（数据集中高宽不一定）
 
-        target = ET.parse(self._annopath % img_id).getroot()
+        # target = ET.parse(self._annopath % img_id).getroot()
 
         if self.target_transform is not None:
             target = self.target_transform(splited, width, height)
@@ -92,7 +95,7 @@ class VOCDetection(data.Dataset):
         # SSDAugmentation(cfg['min_dim'],MEANS))  图像增强
         if self.transform is not None:
             # 转化为tensor  形状为（x,5）  x:图像中的物体总数   5：bbox坐标、 类别
-            target = np.array(target)
+            target = np.array(target, dtype=np.float)
             # 图像增强
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
             # to rgb  转化为rgb

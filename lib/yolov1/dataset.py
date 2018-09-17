@@ -96,7 +96,7 @@ class yoloDataset(t.utils.data.Dataset):
         '''
         继承Dataset，需实现该方法，得到数据集中图像总数
         '''
-        return self.num_samples
+        return 7000#self.num_samples
 
     def encoder(self,boxes,labels):
         '''

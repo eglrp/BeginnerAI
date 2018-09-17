@@ -153,7 +153,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         truths,
         # 将预先生成的锚坐标由中心点坐标和宽高转化为(xmin, ymin, xmax, ymax)形式
         point_form(priors)
-    )
+    ) # 结果的shape为1，8732，也就是真实框与每一个锚的IOU覆盖率
 
     #原论文的匹配方法:
     #1、用 MultiBox 中的 best jaccard overlap 来匹配每一个 ground truth box 与 default box，这样就能保证每一个 groundtruth box 与唯一的一个 default box 对应起来

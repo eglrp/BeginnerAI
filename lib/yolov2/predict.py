@@ -53,6 +53,7 @@ class YoloV2Predict(object):
             cv2.putText(img, label, (p1[0], p1[1] + baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, 8)
 
         cv2.imwrite('%s/YOLOV2_%s_%03d.png' % (targetPath,name, epoch),img)
+        return img
 
     def _get_region_boxes(self, output, conf_thresh, num_classes, anchors, num_anchors, only_objectness=1, validation=False):
         anchor_step = int(len(anchors) / num_anchors)

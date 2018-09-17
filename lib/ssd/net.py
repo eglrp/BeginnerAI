@@ -262,13 +262,13 @@ class SSD(nn.Module):
         # 将vgg层的feature map保存
         for k in range(23):
             x = self.vgg[k](x)
-        s = self.L2Norm(x)
+        s = self.L2Norm(x) # x 此时为batch_size, 512, 38, 38
         sources.append(s)
 
         # apply vgg up to fc7，即将原fc7层更改为卷积层输出的结果，经过relu之后保存结果
         for k in range(23, len(self.vgg)):
             x = self.vgg[k](x)
-        sources.append(x)
+        sources.append(x) # x此时为batch_size,1024,19,19
 
         # apply extra layers and cache source layer outputs
         # 将新增层的feature map保存
@@ -278,7 +278,15 @@ class SSD(nn.Module):
             # 论文中隔一个conv保存一个结果
             if k % 2 == 1:
                 sources.append(x)
-
+        '''
+        sources是一个长度为6的list，每个元素都是一个tensor
+        sources[0] => batch_size, 512, 38, 38
+        sources[1] => batch_size, 1024, 19, 19
+        sources[2] => batch_size, 512, 10, 10
+        sources[3] => batch_size, 256, 5, 5
+        sources[4] => batch_size, 256, 3, 3
+        sources[5] => batch_size, 256, 1, 1
+        '''
         # apply multibox head to source layers
         # permute  将tensor的维度换位  参数为换位顺序
         #contiguous 返回一个内存连续的有相同数据的tensor
@@ -289,9 +297,34 @@ class SSD(nn.Module):
         for (x, l, c) in zip(sources, self.loc, self.conf):
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+
+        '''
+        这里的技巧很高超，我们知道特征图有6层，分别是38*38，19*19，10*10，5*5，3*3和1*1，
+        38*38层每个单元格4个预测框，19*19是6个，10*10是6个，5*5是6个，3*3是4个，1*1是4个，
+        总共是8732个，loc最后需要的是这8732个预测框的四个坐标值，所以我们可以看到如下loc
+        的值，最后一个维度都是预测框的数量*4，然后合在一起正好是8732*4
+        loc[0]  => batch_size, 38, 38, 16
+        loc[1]  => batch_size, 19, 19, 24
+        loc[2]  => batch_size, 10, 10, 24
+        loc[3]  => batch_size,  5,  5, 24
+        loc[4]  => batch_size,  3,  3, 16
+        loc[5]  => batch_size,  1,  1, 16
+        
+        至于conf，应该保存的是当前单元格预测的分类的one-hot编码，对于VOC数据集来说，就是
+        21维的一个向量，所以下面的最后一个维度都是预测框的数量*21
+        conf[0] => batch_size, 38, 38,  84
+        conf[1] => batch_size, 19, 19, 126
+        conf[2] => batch_size, 10, 10, 126
+        conf[3] => batch_size,  5,  5, 126
+        conf[4] => batch_size,  3,  3,  84
+        conf[5] => batch_size,  1,  1,  84
+        '''
         # 在给定维度上对输入的张量序列seq 进行连接操作    dimension=1表示在列上连接
-        loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
-        conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
+        loc = [o.view(o.size(0), -1) for o in loc]
+        loc = torch.cat(loc, 1) # batch_size, 34928
+
+        conf = [o.view(o.size(0), -1) for o in conf]
+        conf = torch.cat(conf, 1) # batch_size, 183372
         # 测试集上的输出
         if self.phase == "test":
             output = self.detect(

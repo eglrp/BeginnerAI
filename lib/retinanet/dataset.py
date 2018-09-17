@@ -119,7 +119,7 @@ class ListDataset(torch.utils.data.Dataset):
         return inputs, torch.stack(loc_targets), torch.stack(cls_targets)
 
     def __len__(self):
-        return self.num_samples
+        return 7000#self.num_samples
 
 
 # def test():

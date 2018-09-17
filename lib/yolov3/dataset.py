@@ -28,7 +28,7 @@ class listDataset(Dataset):
         self.num_workers = num_workers
 
     def __len__(self):
-        return self.nSamples
+        return 7000#self.nSamples
 
     def __getitem__(self, index):
         assert index <= len(self), 'index range error'

@@ -42,6 +42,7 @@ class YoLoPredict(object):
             cv2.putText(image, label, (p1[0], p1[1] + baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, 8)
 
         cv2.imwrite('%s/yolov1_%s_%03d.png' % (targetPath, name, epoch),image)
+        return image
 
     def _decoder(self, pred):
         grid_num = 7
