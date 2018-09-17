@@ -1,75 +1,103 @@
 import torch
+import PIL
+import numpy as np
+import scipy.misc as misc
+import torchvision
 
-from torch.optim import SGD
-from torch.autograd import Variable
-from torch.utils.data import DataLoader
+import lib.unet.dataset as unet_data
+import lib.unet.net as unet_net
+import lib.unet.loss as unet_loss
+import lib.ProgressBar as j_bar
+import pydensecrf.densecrf as dcrf
 
-from lib.models.seg import UNet, cross_entropy2d
-from lib.dataset.pytorch_dataset import VOCSegDataSet
-from lib.utils.utils_fcn import Compose, RandomHorizontallyFlip, RandomRotate
-from lib.ProgressBar import ProgressBar
-
-UNetConfig = {
+CONFIG = {
+    "USE_GPU" : torch.cuda.is_available(),
     "CLASS_NUMS" : 21,
     "CLASSES" : ['background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair',
                  'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep',
                  'sofa', 'train', 'tvmonitor'],
-    "IMAGE_SIZE" : 416,
+    "IMAGE_SIZE" : 256,
     "EPOCHS" : 120,
     "IMAGE_CHANNEL" : 3,
-    "GPU_NUMS" : 0,
     "LEARNING_RATE" : 1.0e-10,
     "BATCH_SIZE" : 1,
     "MOMENTUM" : 0.99,
     "WEIGHT_DECAY" : 0.0005,
-    "DATA_PATH" : "/input/",
+    "DATA_PATH" : "/input/VOC2012",
+    "EPOCH" : 120,
     "FEATURE_SCALE" : 4
 }
 
-'''
-Model
-'''
-model = UNet(cfg=UNetConfig)
+FROM_TRAIN_ITER = 1
+data_set = unet_data.VOCSegDataSet(CONFIG["DATA_PATH"], is_transform=True, augmentations=None,
+                                   img_size=(CONFIG["IMAGE_SIZE"],CONFIG["IMAGE_SIZE"]))
+train_loader = torch.utils.data.DataLoader(data_set,batch_size=1, shuffle=True)
 
-if UNet["GPU_NUMS"] > 0:
+model = unet_net.UNet(CONFIG)
+if FROM_TRAIN_ITER > 1:
+    model.load_state_dict(torch.load("outputs/UNet_%03d.pth" % (FROM_TRAIN_ITER - 1)))
+
+if CONFIG["USE_GPU"]:
     model = model.cuda()
+LEARNING_RATE = CONFIG["LEARNING_RATE"]
+optim = torch.optim.SGD(model.parameters(),lr=CONFIG["LEARNING_RATE"],momentum=CONFIG["MOMENTUM"],
+                        weight_decay=CONFIG["WEIGHT_DECAY"])
 
-optimizer = SGD(model.parameters(), lr=1e-5, momentum=0.99, weight_decay=5e-4)
-'''
-Loss
-'''
-loss_fn = cross_entropy2d
+bar = j_bar.ProgressBar(CONFIG["EPOCH"], len(train_loader), "Loss : %.3f; Total Loss : %.3f")
 
-'''
-Data
-'''
-
-data_loader = VOCSegDataSet(is_transform=True, img_size=(UNet["IMAGE_SIZE"], UNet["IMAGE_SIZE"]),
-                            augmentations=Compose([RandomRotate(10),
-                                                   RandomHorizontallyFlip()]), img_norm=True)
-
-train_loader = DataLoader(data_loader, batch_size=UNet["BATCH_SIZE"], shuffle=True)
-
-'''
-Train
-'''
-bar = ProgressBar(UNet["EPOCHS"], len(train_loader), "Loss:%.3f")
-for epoch in range(1, UNet["EPOCHS"]):
+for epoch in (FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     model.train()
-    for i, (images, labels) in enumerate(train_loader):
-        images = Variable(images.cuda() if UNet["GPU_NUMS"] > 0 else images)
-        labels = Variable(labels.cuda() if UNet["GPU_NUMS"] > 0 else labels)
+    total_loss = 0
 
-        optimizer.zero_grad()
-        outputs = model(images)
+    for param_group in optim.param_groups:
+        param_group['lr'] = LEARNING_RATE
 
-        loss = loss_fn(input=outputs, target=labels)
+    for batch_idx, (images, targets) in enumerate(train_loader):
+        images = torch.autograd.Variable(images.cuda() if CONFIG["USE_GPU"] else images)
+        targets = torch.autograd.Variable(targets.cuda() if CONFIG["USE_GPU"] else targets)
 
-        loss.backward()
-        optimizer.step()
+        optim.zero_grad()
+        score = model(images)
+        loss = unet_loss.cross_entropy2d(score, targets, size_average=False)
+        total_loss += loss.item()
 
-        bar.show(epoch, loss.item())
-    torch.save(model.state_dict(), "UNet_%03d.pth" % epoch)
+        bar.show(epoch, loss.item(), total_loss / (batch_idx + 1))
 
+    model.eval()
+    img = misc.imread("testImages/demo.jpg")
+    resized_img = misc.imresize(
+        img, (CONFIG["IMAGE_SIZE"], CONFIG["IMAGE_SIZE"]), interp="bicubic"
+    )
+    orig_size = img.shape[:-1]
+    img = misc.imresize(img, (CONFIG["IMAGE_SIZE"], CONFIG["IMAGE_SIZE"]))
+    img = img[:, :, ::-1]
+    img = img.astype(np.float64)
+    img -= data_set.mean
+    img = img.astype(float) / 255.0
+    img = img.transpose(2, 0, 1)
+    img = np.expand_dims(img, 0)
+    img = torch.from_numpy(img).float()
+    if CONFIG["USE_GPU"]:
+        img = img.cuda()
 
+    pred = model(img)
 
+    unary = pred.data.cpu().numpy()
+    unary = np.squeeze(unary, 0)
+    unary = -np.log(unary)
+    unary = unary.transpose(2, 1, 0)
+    w, h, c = unary.shape
+    unary = unary.transpose(2, 0, 1).reshape(CONFIG["CLASS_NUMS"], -1)
+    unary = np.ascontiguousarray(unary)
+
+    resized_img = np.ascontiguousarray(resized_img)
+
+    d = dcrf.DenseCRF2D(w, h, CONFIG["CLASS_NUMS"])
+    d.setUnaryEnergy(unary)
+    d.addPairwiseBilateral(sxy=5, srgb=3, rgbim=resized_img, compat=1)
+
+    q = d.inference(50)
+    mask = np.argmax(q, axis=0).reshape(w, h).transpose(1, 0)
+    decoded_crf = data_set.decode_segmap(np.array(mask, dtype=np.uint8))
+
+    misc.imsave("outputs/UNet_%03d.png" % epoch, decoded_crf)

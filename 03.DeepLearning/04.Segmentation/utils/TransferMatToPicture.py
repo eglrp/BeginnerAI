@@ -9,8 +9,8 @@ from scipy.misc import toimage, imsave, imread
 from tqdm import tqdm
 from shutil import move,copy
 
-VOC_2012_ROOT_PATH = os.path.join("/input", "VOC2012")
-BENCHMARK_ROOT_PATH = os.path.join("/input", "benchmark_RELEASE")
+VOC_2012_ROOT_PATH = os.path.join("/input", "VOC2007")
+
 PHASE = ["train.txt", "val.txt"]
 
 def encode_segmap(mask):
@@ -50,29 +50,30 @@ for phase in PHASE:
         lbl = encode_segmap(imread(lbl_path))
         lbl = toimage(lbl, high=lbl.max(), low=lbl.min())
         imsave(os.path.join(TARGET_SEGMETATION_FOLDER, fname), lbl)
-
-'''
-Trasfer Benchmark mat Segmentation To VOC 2012 Folder
-'''
-BENCHMARK_DATASET_ROOT_PATH = os.path.join(BENCHMARK_ROOT_PATH, "dataset")
-BENCHMARK_DATASET_SEG_PATH = os.path.join(BENCHMARK_DATASET_ROOT_PATH, "cls")
-for phrase in PHASE:
-    file_path = os.path.join(BENCHMARK_DATASET_ROOT_PATH, phrase)
-    lines = tuple(open(file_path, 'r'))
-    lines = [id_.rstrip() for id_ in lines]
-
-    for line in tqdm(lines):
-        lbl_path = os.path.join(BENCHMARK_DATASET_SEG_PATH, line + '.mat')
-        data = loadmat(lbl_path)
-        lbl = data['GTcls'][0]['Segmentation'][0].astype(np.int32)
-        lbl = toimage(lbl, high=lbl.max(), low=lbl.min())
-        imsave(os.path.join(TARGET_SEGMETATION_FOLDER, line + '.png'), lbl)
-
-'''
-Move Benchmark two information files to VOC 2012 Folder
-'''
-for phase in PHASE:
-    file_path = os.path.join(BENCHMARK_DATASET_ROOT_PATH, phase)
-    move(file_path, os.path.join(VOC_2012_SEGMETATION_INFO_FILE_FOLDER, "benchmark_%s" % phase))
+#
+# '''
+# Trasfer Benchmark mat Segmentation To VOC 2012 Folder
+# '''
+# BENCHMARK_ROOT_PATH = os.path.join("/input", "benchmark_RELEASE")
+# BENCHMARK_DATASET_ROOT_PATH = os.path.join(BENCHMARK_ROOT_PATH, "dataset")
+# BENCHMARK_DATASET_SEG_PATH = os.path.join(BENCHMARK_DATASET_ROOT_PATH, "cls")
+# for phrase in PHASE:
+#     file_path = os.path.join(BENCHMARK_DATASET_ROOT_PATH, phrase)
+#     lines = tuple(open(file_path, 'r'))
+#     lines = [id_.rstrip() for id_ in lines]
+#
+#     for line in tqdm(lines):
+#         lbl_path = os.path.join(BENCHMARK_DATASET_SEG_PATH, line + '.mat')
+#         data = loadmat(lbl_path)
+#         lbl = data['GTcls'][0]['Segmentation'][0].astype(np.int32)
+#         lbl = toimage(lbl, high=lbl.max(), low=lbl.min())
+#         imsave(os.path.join(TARGET_SEGMETATION_FOLDER, line + '.png'), lbl)
+#
+# '''
+# Move Benchmark two information files to VOC 2012 Folder
+# '''
+# for phase in PHASE:
+#     file_path = os.path.join(BENCHMARK_DATASET_ROOT_PATH, phase)
+#     move(file_path, os.path.join(VOC_2012_SEGMETATION_INFO_FILE_FOLDER, "benchmark_%s" % phase))
 
 

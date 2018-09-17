@@ -113,14 +113,13 @@ for epoch in range(FROM_TRAIN_ITER, max_epochs + 1):
     #     LEARNING_RATE = 0.0005
     # if epoch >= 120:
     #     LEARNING_RATE = 0.00025
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = LEARNING_RATE/batch_size
+    # for param_group in optimizer.param_groups:
+    #     param_group['lr'] = LEARNING_RATE/batch_size
     for batch_idx, (data, target) in enumerate(train_loader):
-        # processed_batches = model.seen//batch_size
+        processed_batches = model.seen//batch_size
 
-        # adjust_learning_rate(optimizer, processed_batches)
-        # processed_batches = processed_batches + 1
+        adjust_learning_rate(optimizer, processed_batches)
+        processed_batches = processed_batches + 1
         images = torch.autograd.Variable(data.cuda() if CONFIG["USE_GPU"] else data)
         target = torch.autograd.variable(target.cuda() if CONFIG["USE_GPU"] else target)
 
