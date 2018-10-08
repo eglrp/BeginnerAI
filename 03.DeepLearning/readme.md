@@ -9,7 +9,8 @@
 # 3.图片识别
 PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjykQ)
 ## YOLOV1
-![images](result/YOLOV1.png)
+![images](result/YOLOV1.png)<br/>
+![images](result/YOLOV1_Loss.png)
 
 ## SSD
 | 图片一 | 图片二 |

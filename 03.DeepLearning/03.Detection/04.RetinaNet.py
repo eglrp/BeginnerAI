@@ -9,11 +9,14 @@ import lib.retinanet.net as rn_net
 import lib.retinanet.loss as rn_loss
 import lib.ProgressBar as j_bar
 import lib.retinanet.predict as rn_predict
+import tqdm
+import lib.utils.logger as logger
+
 CONFIG = {
     "LEARNING_RATE" : 1e-3,
     "DATA_FOLDER" : os.path.join("/input", "VOC", "JPEGImages"),
     "IMAGE_SIZE" : 600,
-    "BATCH_SIZE" : 16,
+    "BATCH_SIZE" : 8,
     "USE_GPU" : torch.cuda.is_available(),
     "EPOCHS" : 300,
     "CLASSES" : (  # always index 0
@@ -49,8 +52,10 @@ if FROM_TRAIN_ITER > 1:
 
 predict = rn_predict.RetinaPredict(CONFIG["CLASSES"])
 bar = j_bar.ProgressBar(CONFIG["EPOCHS"], len(trainloader), "Loss:%.3f;Total Loss:%.3f")
+log = logger.Logger("logs/")
 for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     net.train()
+    net.freeze_bn()
     total_loss = 0
     torch.cuda.empty_cache()
     for batch_idx, (inputs, loc_targets, cls_targets) in enumerate(trainloader):
@@ -71,4 +76,15 @@ for epoch in range(FROM_TRAIN_ITER, CONFIG["EPOCHS"] + 1):
     torch.save(net.state_dict(), "outputs/RetinaNet_%03d.pth" % epoch)
 
     net.eval()
-    predict.predict(net, epoch, "testImages/demo.jpg", "demo")
+    path = os.path.join("testImages")
+    listfile = os.listdir(path)
+    for file in tqdm.tqdm(listfile):
+        if file.endswith("jpg"):
+            filename = file.split(".")[0]
+            image = predict.predict(net, epoch, os.path.join(path,"%s.jpg" % filename), filename, targetPath="results/")
+
+    # image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+    info = {'loss': total_loss / (batch_idx+1)}
+
+    for tag, value in info.items():
+        log.scalar_summary(tag, value, epoch)
