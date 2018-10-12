@@ -33,8 +33,7 @@ class RetinaPredict(object):
         img = cv2.imread(sourcePath)
         h,w,_ = img.shape
 
-        sized = cv2.resize(img, (416, 416))
-        sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
+        sized = cv2.resize(img, (600, 600))
         transform = tv.transforms.Compose([
             tv.transforms.ToTensor(),
             tv.transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))

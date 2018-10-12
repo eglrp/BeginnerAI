@@ -43,15 +43,15 @@ class ListDataset(torch.utils.data.Dataset):
         for line in lines:
             splited = line.strip().split()
             self.fnames.append(splited[0])
-            num_boxes = (len(splited) - 1) // 5
+            num_boxes = int(splited[1])
             box = []
             label = []
             for i in range(num_boxes):
-                xmin = splited[1+5*i]
-                ymin = splited[2+5*i]
-                xmax = splited[3+5*i]
-                ymax = splited[4+5*i]
-                c = splited[5+5*i]
+                xmin = splited[2+5*i]
+                ymin = splited[3+5*i]
+                xmax = splited[4+5*i]
+                ymax = splited[5+5*i]
+                c = splited[6+5*i]
                 box.append([float(xmin),float(ymin),float(xmax),float(ymax)])
                 label.append(int(c))
             self.boxes.append(torch.Tensor(box))
