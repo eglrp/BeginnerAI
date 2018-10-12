@@ -1,9 +1,7 @@
 import torch as t
 import torchvision as tv
 import cv2
-import numpy as np
 
-from PIL import Image
 import lib.yolov1.model as yolo_model
 import lib.yolov1.loss as yolo_loss
 import lib.yolov1.dataset as yolo_data

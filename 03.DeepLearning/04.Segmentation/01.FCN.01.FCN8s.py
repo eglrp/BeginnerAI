@@ -67,6 +67,8 @@ for epoch in (FROM_TRAIN_ITER, FCNConfig["EPOCHS"] + 1):
 
         bar.show(epoch, loss.item(), total_loss / (batch_idx + 1))
 
+    torch.save(model.state_dict(), "outputs/FCN8s_%03d.pth" % epoch)
+
     model.eval()
     img = misc.imread("testImages/demo.jpg")
     resized_img = misc.imresize(

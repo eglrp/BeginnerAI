@@ -9,24 +9,45 @@
 # 3.图片识别
 PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjykQ)
 ## YOLOV1
-![images](result/YOLOV1.png)<br/>
-![images](result/YOLOV1_Loss.png)
+![images](result/03_01_YOLOV1.png)<br/>
+![images](result/03_01_YOLOV1_Loss.png)
 
 ## SSD
 | 图片一 | 图片二 |
 | ------ | ------ |
-| ![images](result/SSD_1.png) | ![images](result/SSD_2.png) |
+| ![images](result/03_02_SSD_01.png) | ![images](result/03_02_SSD_02.png) |
 
 ## YOLOV2
 | 图片一 | 图片二 |
 | ------ | ------ |
-| ![images](result/YOLOV2_01.png) | ![images](result/YOLOV2_02.png) |
+| ![images](result/03_03_YOLOV2_01.png) | ![images](result/03_03_YOLOV2_02.png) |
 
 ## RetinaNet
 
 ## YOLOV3
 
 # 4.图片分割
+## FCN8s
+
+## FCN 16s
+
+## FCN32s
+
+## UNet
+
+## FRRN
+
+## Mask RCNN(Shape)
+| 图片一 | 图片二 |
+| ------ | ------ |
+| ![images](result/04_04_MASKRCNN_01.png) | ![images](result/04_04_MASKRCNN_02.png) |
+
+## Mask RCNN(Ballon)
+
+## Mask RCNN(COCO)
+| 图片一 | 图片二 |
+| ------ | ------ |
+| ![images](result/04_06_MASKRCNN_01.png) | ![images](result/04_06_MASKRCNN_02.png) |
 
 # 5.自编码器
 
