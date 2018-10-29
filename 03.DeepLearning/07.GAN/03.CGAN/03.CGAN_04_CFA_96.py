@@ -6,8 +6,8 @@ from torchvision.transforms import Resize, Compose,ToTensor,Normalize
 from torch.optim import Adam
 from torch.autograd import Variable
 
-from lib.dataset.pytorch_dataset import Cifar10DataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import Cifar10DataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 CONFIG = {
     "DATA_PATH" : "/input/JData/",

@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, ToTensor
 
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 GPU_NUMS = 2
 EPOCH = 30
 

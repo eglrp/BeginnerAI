@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
 
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 if not os.path.exists('dc_img'):
     os.mkdir('dc_img')

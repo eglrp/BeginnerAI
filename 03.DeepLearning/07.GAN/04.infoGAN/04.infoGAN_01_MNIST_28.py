@@ -2,8 +2,8 @@ import torch
 import torchvision
 import numpy as np
 
-from lib.ProgressBar import ProgressBar
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
 
 CONFIG={
     "NOISE_DIM" : 100,

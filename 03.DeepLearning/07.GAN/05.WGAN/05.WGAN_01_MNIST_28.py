@@ -5,8 +5,8 @@ import torch.optim as t_optim
 
 import torchvision as tv
 
-import lib.dataset.pytorch_dataset as j_data
-import lib.ProgressBar as j_bar
+import lib.pytorch.dataset.pytorch_dataset as j_data
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "NOISE_DIM" : 100,

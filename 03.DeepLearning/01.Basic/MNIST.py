@@ -7,8 +7,8 @@ import torchvision
 from torch.optim import Adam
 from torch.nn import functional as F
 
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 torch.manual_seed(1)
 EPOCH = 10

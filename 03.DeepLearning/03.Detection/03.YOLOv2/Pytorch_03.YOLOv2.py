@@ -1,15 +1,15 @@
 import torch as t
-import lib.yolov2.utils as yolo_utils
-import lib.yolov2.net as yolo_net
-import lib.yolov2.dataset as yolo_data
-import lib.ProgressBar as j_bar
-import lib.yolov2.predict as yolo_predict
+import lib.pytorch.yolov2.utils as yolo_utils
+import lib.pytorch.yolov2.net as yolo_net
+import lib.pytorch.yolov2.dataset as yolo_data
+import lib.utils.ProgressBar as j_bar
+import lib.pytorch.yolov2.predict as yolo_predict
 import time
 import torchvision as tv
 
 import cv2
 
-import lib.utils.logger as logger
+import lib.pytorch.utils.logger as logger
 
 CONFIG = {
     "USE_CUDA" : t.cuda.is_available(),

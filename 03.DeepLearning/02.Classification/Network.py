@@ -9,9 +9,9 @@ from torch.nn import CrossEntropyLoss
 from torch.autograd import Variable
 from torch.nn.functional import softmax
 
-from lib.models.cifar import SENet
-from lib.dataset.pytorch_dataset import Cifar10DataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.models.cifar import SENet
+from lib.pytorch.dataset.pytorch_dataset import Cifar10DataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 EPOCH = 20
 BATCH_SIZE = 64

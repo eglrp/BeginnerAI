@@ -4,10 +4,10 @@ import numpy as np
 import scipy.misc as misc
 import torchvision
 
-import lib.frrn.dataset as frrn_data
-import lib.frrn.net as frrn_net
-import lib.frrn.loss as frrn_loss
-import lib.ProgressBar as j_bar
+import lib.pytorch.frrn.dataset as frrn_data
+import lib.pytorch.frrn.net as frrn_net
+import lib.pytorch.frrn.loss as frrn_loss
+import lib.utils.ProgressBar as j_bar
 import pydensecrf.densecrf as dcrf
 
 CONFIG = {

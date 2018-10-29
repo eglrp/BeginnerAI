@@ -1,9 +1,9 @@
-import lib.jensor.jensor as jen
-import lib.jensor.layers as lay
+import lib.pytorch.jensor.jensor as jen
+import lib.pytorch.jensor.layers as lay
 
-import lib.dataset.pytorch_dataset as j_data
+import lib.pytorch.dataset.pytorch_dataset as j_data
 import numpy as np
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 import torch
 import torchvision
 

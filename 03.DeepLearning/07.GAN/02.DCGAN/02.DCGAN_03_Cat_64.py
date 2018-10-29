@@ -2,7 +2,7 @@
 import torch as t
 import torchvision as tv
 import torchvision.datasets as dset
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 
 CONFIG = {
     "DATA_PATH" : "/input/Cat64/",

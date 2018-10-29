@@ -2,7 +2,7 @@ import torch
 import torchvision
 import numpy as np
 
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 
 CONFIG={
     "DATA_PATH" : "/input/Faces/Eyeglasses",

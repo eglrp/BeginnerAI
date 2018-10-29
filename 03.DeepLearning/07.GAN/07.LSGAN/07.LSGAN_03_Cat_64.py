@@ -5,7 +5,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transf
 import torchvision.utils as vutils
 
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "DATA_PATH" : "/input/Cat64/",

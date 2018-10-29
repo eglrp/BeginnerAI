@@ -1,7 +1,7 @@
-import lib.cnn.python_layer as cnn_layer
-import lib.dataset.pytorch_dataset as j_data
+import lib.pytorch.cnn.python_layer as cnn_layer
+import lib.pytorch.dataset.pytorch_dataset as j_data
 import numpy as np
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 import torch
 import torchvision
 

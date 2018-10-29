@@ -8,8 +8,8 @@ from torch.nn import Module, Sequential, Linear, BatchNorm1d, ReLU, ConvTranspos
     Sigmoid, BCELoss
 from torch.autograd import Variable
 
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 CONFIG = {
     "DATA_PATH" : "/input/mnist.npz",

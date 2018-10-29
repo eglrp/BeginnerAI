@@ -1,14 +1,14 @@
 import torch as t
 import cv2
-import lib.utils.logger as logger
-import lib.ssd.augmentations as ssd_aug
-import lib.ssd.dataset as ssd_data
-import lib.ssd.loss as ssd_loss
-import lib.ssd.net as ssd_net
-import lib.ssd.predict as ssd_predict
-import lib.ssd.utils as ssd_utils
+import lib.pytorch.utils.logger as logger
+import lib.pytorch.ssd.augmentations as ssd_aug
+import lib.pytorch.ssd.dataset as ssd_data
+import lib.pytorch.ssd.loss as ssd_loss
+import lib.pytorch.ssd.net as ssd_net
+import lib.pytorch.ssd.predict as ssd_predict
+import lib.pytorch.ssd.utils as ssd_utils
 
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "USE_GPU" : t.cuda.is_available(),

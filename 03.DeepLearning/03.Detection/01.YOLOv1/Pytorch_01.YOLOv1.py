@@ -2,13 +2,13 @@ import torch as t
 import torchvision as tv
 import cv2
 
-import lib.yolov1.model as yolo_model
-import lib.yolov1.loss as yolo_loss
-import lib.yolov1.dataset as yolo_data
-import lib.yolov1.predict as yolo_predict
-import lib.utils.logger as logger
+import lib.pytorch.yolov1.model as yolo_model
+import lib.pytorch.yolov1.loss as yolo_loss
+import lib.pytorch.yolov1.dataset as yolo_data
+import lib.pytorch.yolov1.predict as yolo_predict
+import lib.pytorch.utils.logger as logger
 
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "USE_GPU" : t.cuda.is_available(),

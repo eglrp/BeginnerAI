@@ -6,8 +6,8 @@ from torch.autograd import Variable
 from torch.nn.functional import leaky_relu, sigmoid
 from torch.optim import Adadelta
 
-from lib.utils.utils_gan import generate_lut,sample_2d,GANDemoVisualizer
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.utils.utils_gan import generate_lut,sample_2d,GANDemoVisualizer
+from lib.utils.ProgressBar import ProgressBar
 
 PHRASE = "TRAIN"
 DIMENSION = 2

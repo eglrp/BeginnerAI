@@ -6,11 +6,11 @@ import random
 import os
 import imghdr
 from PIL import Image, ImageDraw, ImageFont
-
-import lib_keras.yolov2.utils as k_utils
+import lib.utils.drawutils as draw
+import lib.keras.yolov2.utils as k_utils
 
 CONFIG = {
-    "MODEL_PATH" : "utils/keras_yolov2.h5",
+    "MODEL_PATH" : "utils/keras_yolov2_coco.h5",
     "ANCHORS" : "0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828",
     "CLASSES" : ["person","bicycle","car" ,"motorbike","aeroplane","bus","train","truck",
                  "boat","traffic light","fire hydrant","stop sign","parking meter","bench",
@@ -82,46 +82,54 @@ for image_file in os.listdir(CONFIG["TEST_PATH"]):
             input_image_shape: [image.size[1], image.size[0]],
             K.learning_phase(): 0
         })
-    print('Found {} boxes for {}'.format(len(out_boxes), image_file))
 
-    font = ImageFont.truetype(
-        font='utils/FiraMono-Medium.otf',
-        size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
-    thickness = (image.size[0] + image.size[1]) // 300
-
+    result = []
     for i, c in reversed(list(enumerate(out_classes))):
         predicted_class = class_names[c]
         box = out_boxes[i]
         score = out_scores[i]
-
-        label = '{} {:.2f}'.format(predicted_class, score)
-
-        draw = ImageDraw.Draw(image)
-        label_size = draw.textsize(label, font)
-
         top, left, bottom, right = box
         top = max(0, np.floor(top + 0.5).astype('int32'))
         left = max(0, np.floor(left + 0.5).astype('int32'))
         bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
         right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-        #the result's origin is in top left
-        print(label, (left, top), (right, bottom))
-
-        if top - label_size[1] >= 0:
-            text_origin = np.array([left, top - label_size[1]])
-        else:
-            text_origin = np.array([left, top + 1])
-
-        # My kingdom for a good redistributable image drawing library.
-        for i in range(thickness):
-            draw.rectangle(
-                [left + i, top + i, right - i, bottom - i],
-                outline=colors[c])
-        draw.rectangle(
-            [tuple(text_origin), tuple(text_origin + label_size)],
-            fill=colors[c])
-        draw.text(text_origin, label, fill=(0, 0, 0), font=font)
-        del draw
-
-    image.save(os.path.join(CONFIG["OUTPUT_PATH"], image_file), quality=90)
+        result.append(
+            [
+                (left, top),
+                (right, bottom),
+                predicted_class,
+                score
+            ]
+        )
+    draw.draw_box(image, result, "outputs/%s" % image_file, datatype="coco")
+    #     label = '{} {:.2f}'.format(predicted_class, score)
+    #
+    #     draw = ImageDraw.Draw(image)
+    #     label_size = draw.textsize(label, font)
+    #
+    #     top, left, bottom, right = box
+    #     top = max(0, np.floor(top + 0.5).astype('int32'))
+    #     left = max(0, np.floor(left + 0.5).astype('int32'))
+    #     bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+    #     right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+    #     #the result's origin is in top left
+    #     print(label, (left, top), (right, bottom), thickness)
+    #
+    #     if top - label_size[1] >= 0:
+    #         text_origin = np.array([left, top - label_size[1]])
+    #     else:
+    #         text_origin = np.array([left, top + 1])
+    #
+    #     # My kingdom for a good redistributable image drawing library.
+    #     # for i in range(thickness):
+    #     #     draw.rectangle(
+    #     #         [left + i, top + i, right - i, bottom - i],
+    #     #         outline=colors[c])
+    #     draw.rectangle(
+    #         [tuple(text_origin), tuple(text_origin + label_size)],
+    #         fill=colors[c])
+    #     draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+    #     del draw
+    #
+    # image.save(os.path.join(CONFIG["OUTPUT_PATH"], image_file), quality=90)
 sess.close()

@@ -1,6 +1,6 @@
-import lib.yolov3.predict as yolo_predict
-import lib.yolov3.net as yolo_net
-import lib.detection.test as yolo_test
+import lib.pytorch.yolov3.predict as yolo_predict
+import lib.pytorch.yolov3.net as yolo_net
+import lib.pytorch.detection.test as yolo_test
 import torch as t
 import os
 import tqdm

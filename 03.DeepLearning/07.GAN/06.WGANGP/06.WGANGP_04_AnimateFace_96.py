@@ -5,7 +5,7 @@ import torch.utils.data as t_data
 import torch.autograd as t_auto
 import torch.optim as t_optim
 
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "DATA_PATH" : "/input/AnimateFace/",

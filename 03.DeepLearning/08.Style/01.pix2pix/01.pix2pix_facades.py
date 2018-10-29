@@ -3,9 +3,9 @@ import torchvision as tv
 import torch.autograd as t_auto
 import torch.optim as t_optim
 import os
-import lib.dataset.pytorch_dataset as j_data
-import lib.ProgressBar as j_bar
-import lib.utils.utils_style as j_utils
+import lib.pytorch.dataset.pytorch_dataset as j_data
+import lib.utils.ProgressBar as j_bar
+import lib.pytorch.utils.utils_style as j_utils
 CONFIG = {
     "GPU_NUM" : 1,
     "EPOCH" : 200,

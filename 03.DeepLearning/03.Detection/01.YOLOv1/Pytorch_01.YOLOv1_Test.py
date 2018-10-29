@@ -1,6 +1,6 @@
-import lib.yolov1.predict as yolo_predict
-import lib.yolov1.model as yolo_net
-import lib.detection.test as yolo_test
+import lib.pytorch.yolov1.predict as yolo_predict
+import lib.pytorch.yolov1.model as yolo_net
+import lib.pytorch.detection.test as yolo_test
 import torch as t
 import os
 import tqdm
@@ -27,7 +27,7 @@ CONFIG = {
 }
 
 PHRASE = "Predict" # "Test"
-modelpath = "results/YOLOV1.pth"
+modelpath = "utils/YOLOV1.pth"
 model = yolo_net.YoLoV1Net(CONFIG)
 stc = t.load(modelpath) if t.cuda.is_available() else t.load(modelpath, map_location={'cuda:0': 'cpu'})
 stc = dict(stc)
@@ -45,12 +45,12 @@ predict = yolo_predict.YoLoPredict(CONFIG["CLASSES"])
 model.eval()
 
 if PHRASE == "Predict":
-    path = os.path.join("testImages")
+    path = os.path.join("../testImages")
     listfile = os.listdir(path)
     for file in tqdm.tqdm(listfile):
         if file.endswith("jpg"):
             filename = file.split(".")[0]
-            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="results/")
+            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="outputs/")
 else:
     TestObj = yolo_test.Detection_Test()
     print(TestObj.calculateMAP(model, predict))

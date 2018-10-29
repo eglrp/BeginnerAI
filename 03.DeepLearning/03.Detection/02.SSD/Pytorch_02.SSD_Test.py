@@ -1,5 +1,5 @@
-import lib.ssd.predict as ssd_predict
-import lib.ssd.net as ssd_net
+import lib.pytorch.ssd.predict as ssd_predict
+import lib.pytorch.ssd.net as ssd_net
 import torch as t
 import os
 import tqdm
@@ -39,7 +39,7 @@ CONFIG = {
 }
 
 model = ssd_net.build_ssd("test", CONFIG)
-model.load_state_dict(t.load("results/SSD01.pth", map_location={'cuda:0': 'cpu'}))
+model.load_state_dict(t.load("utils/SSD.pth", map_location={'cuda:0': 'cpu'}))
 
 if t.cuda.is_available():
     model = model.cuda()
@@ -53,6 +53,6 @@ if PHRASE == "Predict":
     for file in tqdm.tqdm(listfile):
         if file.endswith("jpg"):
             filename = file.split(".")[0]
-            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="results/")
+            predict.predict(model, 0, os.path.join(path,"%s.jpg" % filename), filename, targetPath="outputs/")
 else:
     pass

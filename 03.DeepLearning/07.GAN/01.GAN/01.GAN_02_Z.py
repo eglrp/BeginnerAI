@@ -9,7 +9,7 @@ from torch.optim import Adadelta
 
 from utils.sampler import generate_lut,sample_2d
 from utils.visualize import GANDemoVisualizer
-from lib.utils.progressbar.ProgressBar import ProgressBar
+from lib.pytorch.utils.progressbar.ProgressBar import ProgressBar
 
 PHRASE = "TRAIN"
 DIMENSION = 2

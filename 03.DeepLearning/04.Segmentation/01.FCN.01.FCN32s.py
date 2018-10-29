@@ -4,10 +4,10 @@ import numpy as np
 import scipy.misc as misc
 import torchvision
 
-import lib.fcn.dataset as fcn_data
-import lib.fcn.net as fcn_net
-import lib.fcn.loss as fcn_loss
-import lib.ProgressBar as j_bar
+import lib.pytorch.fcn.dataset as fcn_data
+import lib.pytorch.fcn.net as fcn_net
+import lib.pytorch.fcn.loss as fcn_loss
+import lib.utils.ProgressBar as j_bar
 import pydensecrf.densecrf as dcrf
 
 FCNConfig = {

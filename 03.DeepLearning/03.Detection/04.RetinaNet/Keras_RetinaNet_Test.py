@@ -1,12 +1,12 @@
 import keras
 import os
 import tensorflow as tf
-import lib_keras.retinanet.net as k_net
-import lib_keras.retinanet.utils as k_utils
+import lib.keras.retinanet.net as k_net
+import lib.keras.retinanet.utils as k_utils
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-import warnings
+import lib.utils.drawutils as drawImage
+import tqdm
 
 def get_session():
     config = tf.ConfigProto()
@@ -18,10 +18,6 @@ model_path = os.path.join('utils', 'keras_resnet50_coco_retinanet.h5')
 
 # load retinanet model
 model = k_net.load_model(model_path, backbone_name='resnet50')
-
-# adjust this to point to your downloaded/trained model
-# models can be downloaded here: https://github.com/fizyr/keras-retinanet/releases
-model_path = os.path.join('..', 'snapshots', 'resnet50_coco_best_v2.1.0.h5')
 
 labels_to_names = {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus',
                    6: 'train', 7: 'truck', 8: 'boat', 9: 'traffic light', 10: 'fire hydrant', 11: 'stop sign',
@@ -35,138 +31,36 @@ labels_to_names = {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'air
                    61: 'toilet', 62: 'tv', 63: 'laptop', 64: 'mouse', 65: 'remote', 66: 'keyboard', 67: 'cell phone',
                    68: 'microwave', 69: 'oven', 70: 'toaster', 71: 'sink', 72: 'refrigerator', 73: 'book', 74: 'clock',
                    75: 'vase', 76: 'scissors', 77: 'teddy bear', 78: 'hair drier', 79: 'toothbrush'}
-colors = [
-    [31  , 0   , 255] ,
-    [0   , 159 , 255] ,
-    [255 , 95  , 0]   ,
-    [255 , 19  , 0]   ,
-    [255 , 0   , 0]   ,
-    [255 , 38  , 0]   ,
-    [0   , 255 , 25]  ,
-    [255 , 0   , 133] ,
-    [255 , 172 , 0]   ,
-    [108 , 0   , 255] ,
-    [0   , 82  , 255] ,
-    [0   , 255 , 6]   ,
-    [255 , 0   , 152] ,
-    [223 , 0   , 255] ,
-    [12  , 0   , 255] ,
-    [0   , 255 , 178] ,
-    [108 , 255 , 0]   ,
-    [184 , 0   , 255] ,
-    [255 , 0   , 76]  ,
-    [146 , 255 , 0]   ,
-    [51  , 0   , 255] ,
-    [0   , 197 , 255] ,
-    [255 , 248 , 0]   ,
-    [255 , 0   , 19]  ,
-    [255 , 0   , 38]  ,
-    [89  , 255 , 0]   ,
-    [127 , 255 , 0]   ,
-    [255 , 153 , 0]   ,
-    [0   , 255 , 255] ,
-    [0   , 255 , 216] ,
-    [0   , 255 , 121] ,
-    [255 , 0   , 248] ,
-    [70  , 0   , 255] ,
-    [0   , 255 , 159] ,
-    [0   , 216 , 255] ,
-    [0   , 6   , 255] ,
-    [0   , 63  , 255] ,
-    [31  , 255 , 0]   ,
-    [255 , 57  , 0]   ,
-    [255 , 0   , 210] ,
-    [0   , 255 , 102] ,
-    [242 , 255 , 0]   ,
-    [255 , 191 , 0]   ,
-    [0   , 255 , 63]  ,
-    [255 , 0   , 95]  ,
-    [146 , 0   , 255] ,
-    [184 , 255 , 0]   ,
-    [255 , 114 , 0]   ,
-    [0   , 255 , 235] ,
-    [255 , 229 , 0]   ,
-    [0   , 178 , 255] ,
-    [255 , 0   , 114] ,
-    [255 , 0   , 57]  ,
-    [0   , 140 , 255] ,
-    [0   , 121 , 255] ,
-    [12  , 255 , 0]   ,
-    [255 , 210 , 0]   ,
-    [0   , 255 , 44]  ,
-    [165 , 255 , 0]   ,
-    [0   , 25  , 255] ,
-    [0   , 255 , 140] ,
-    [0   , 101 , 255] ,
-    [0   , 255 , 82]  ,
-    [223 , 255 , 0]   ,
-    [242 , 0   , 255] ,
-    [89  , 0   , 255] ,
-    [165 , 0   , 255] ,
-    [70  , 255 , 0]   ,
-    [255 , 0   , 172] ,
-    [255 , 76  , 0]   ,
-    [203 , 255 , 0]   ,
-    [204 , 0   , 255] ,
-    [255 , 0   , 229] ,
-    [255 , 133 , 0]   ,
-    [127 , 0   , 255] ,
-    [0   , 235 , 255] ,
-    [0   , 255 , 197] ,
-    [255 , 0   , 191] ,
-    [0   , 44  , 255] ,
-    [50  , 255 , 0]
-]
-
-def label_color(label):
-    """ Return a color from a set of predefined colors. Contains 80 colors in total.
-
-    Args
-        label: The label to get the color for.
-
-    Returns
-        A list of three values representing a RGB color.
-
-        If no color is defined for a certain label, the color green is returned and a warning is printed.
-    """
-    if label < len(colors):
-        return colors[label]
-    else:
-        warnings.warn('Label {} has no color, returning default.'.format(label))
-        return (0, 255, 0)
 
 
 # load image
-image = k_utils.read_image_bgr('../testImages/09.jpg')
+path = os.path.join("../testImages")
+listfile = os.listdir(path)
+for file in tqdm.tqdm(listfile):
+    if file.endswith("jpg"):
+        filename = file.split(".")[0]
 
-# copy to draw on
-draw = image.copy()
-draw = cv2.cvtColor(draw, cv2.COLOR_BGR2RGB)
+        image = cv2.imread(os.path.join(path,"%s.jpg" % filename))
+        draw = image.copy()
+        image = k_utils.preprocess_image(image)
+        image, scale = k_utils.resize_image(image)
+        boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        boxes /= scale
+        result = []
+        # visualize detections©
+        for box, score, label in zip(boxes[0], scores[0], labels[0]):
+            # scores are sorted so we can break
+            if score < 0.5:
+                break
+            b = box.astype(int)
+            result.append(
+                [
+                    (b[0], b[1]),
+                    (b[2], b[3]),
+                    labels_to_names[label],
+                    score
+                ]
+            )
 
-# preprocess image for network
-image = k_utils.preprocess_image(image)
-image, scale = k_utils.resize_image(image)
+        drawImage.draw_box_by_cv2(draw, result, outputs="outputs/%s.jpg" % filename, datatype="coco")
 
-boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-
-# correct for image scale
-boxes /= scale
-
-# visualize detections©
-for box, score, label in zip(boxes[0], scores[0], labels[0]):
-    # scores are sorted so we can break
-    if score < 0.5:
-        break
-
-    color = label_color(label)
-
-    b = box.astype(int)
-    k_utils.draw_box(draw, b, color=color)
-
-    caption = "{} {:.3f}".format(labels_to_names[label], score)
-    k_utils.draw_caption(draw, b, caption)
-
-plt.figure(figsize=(15, 15))
-plt.axis('off')
-plt.imshow(draw)
-plt.show()

@@ -4,10 +4,10 @@ import numpy as np
 import scipy.misc as misc
 import torchvision
 
-import lib.unet.dataset as unet_data
-import lib.unet.net as unet_net
-import lib.unet.loss as unet_loss
-import lib.ProgressBar as j_bar
+import lib.pytorch.unet.dataset as unet_data
+import lib.pytorch.unet.net as unet_net
+import lib.pytorch.unet.loss as unet_loss
+import lib.utils.ProgressBar as j_bar
 import pydensecrf.densecrf as dcrf
 
 CONFIG = {

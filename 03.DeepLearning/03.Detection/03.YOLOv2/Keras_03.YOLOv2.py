@@ -1,6 +1,5 @@
 # https://github.com/yhcc/yolo2
-import lib_keras.yolov2.utils as k_utils
-import lib_keras.yolov2.net as k_net
+import lib.keras.yolov2.net as k_net
 import keras
 
 CONFIG = {

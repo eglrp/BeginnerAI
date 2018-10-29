@@ -9,8 +9,8 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
-from lib.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
 
 
 def to_img(x):

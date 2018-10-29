@@ -1,9 +1,9 @@
 import keras
 import tensorflow as tf
-import lib_keras.retinanet.data as k_data
-import lib_keras.retinanet.net as k_net
-import lib_keras.retinanet.utils as k_utils
-import lib_keras.retinanet.loss as k_loss
+import lib.keras.retinanet.data as k_data
+import lib.keras.retinanet.net as k_net
+import lib.keras.retinanet.utils as k_utils
+import lib.keras.retinanet.loss as k_loss
 
 def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0, freeze_backbone=False, config=None):
     """ Creates three models (model, training_model, prediction_model).

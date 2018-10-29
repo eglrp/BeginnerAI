@@ -1,8 +1,8 @@
-import lib.retinanet.net as rn_net
+import lib.pytorch.retinanet.net as rn_net
 import torch
 import os
 import tqdm
-import lib.retinanet.predict as rn_predict
+import lib.pytorch.retinanet.predict as rn_predict
 
 net = rn_net.RetinaNet()
 stc = torch.load("results/RetinaNet_001.pth", map_location={'cuda:0': 'cpu'})

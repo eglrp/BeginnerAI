@@ -5,10 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-import lib_keras.maskrcnn.utils as mr_utils
-import lib_keras.maskrcnn.dataset as mr_data
-import lib_keras.maskrcnn.config as mr_config
-import lib_keras.maskrcnn.net as mr_net
+import lib.keras.maskrcnn.utils as mr_utils
+import lib.keras.maskrcnn.dataset as mr_data
+import lib.keras.maskrcnn.config as mr_config
+import lib.keras.maskrcnn.net as mr_net
 
 def get_ax(rows=1, cols=1, size=8):
     """Return a Matplotlib Axes array to be used in

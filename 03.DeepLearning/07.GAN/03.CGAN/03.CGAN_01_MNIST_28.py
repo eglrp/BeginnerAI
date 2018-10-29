@@ -7,8 +7,8 @@ from torch.autograd import Variable
 from torch.optim import Adam
 from torchvision.transforms import Compose,Scale,ToTensor, Normalize
 
-from lib.ProgressBar import ProgressBar
-from lib.dataset.pytorch_dataset import MNISTDataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import MNISTDataSetForPytorch
 
 CONFIG = {
     "DATA_PATH" : "/input/mnist.npz",

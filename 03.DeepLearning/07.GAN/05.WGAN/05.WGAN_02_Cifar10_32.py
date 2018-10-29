@@ -1,8 +1,8 @@
 import torch as t
 import torchvision as tv
 
-import lib.dataset.pytorch_dataset as j_data
-import lib.ProgressBar as j_bar
+import lib.pytorch.dataset.pytorch_dataset as j_data
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "DATA_PATH" : "/input/cifar10/",

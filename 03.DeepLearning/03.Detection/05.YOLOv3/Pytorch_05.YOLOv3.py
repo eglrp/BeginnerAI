@@ -1,13 +1,13 @@
-import lib.yolov3.utils as yolo_utils
-import lib.yolov3.net as yolo_net
+import lib.pytorch.yolov3.utils as yolo_utils
+import lib.pytorch.yolov3.net as yolo_net
 import torch
 import time
-import lib.ProgressBar as j_bar
-import lib.yolov3.dataset as yolo_data
+import lib.utils.ProgressBar as j_bar
+import lib.pytorch.yolov3.dataset as yolo_data
 import torchvision
-import lib.yolov3.predict as yolo_predict
+import lib.pytorch.yolov3.predict as yolo_predict
 import cv2
-import lib.utils.logger as logger
+import lib.pytorch.utils.logger as logger
 import os
 import tqdm
 

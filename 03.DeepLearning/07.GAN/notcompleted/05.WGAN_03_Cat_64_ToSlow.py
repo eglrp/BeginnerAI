@@ -1,6 +1,6 @@
 import torch as t
 import torchvision as tv
-import lib.ProgressBar as j_bar
+import lib.utils.ProgressBar as j_bar
 
 CONFIG = {
     "DATA_PATH" : "/input/Cat64/",

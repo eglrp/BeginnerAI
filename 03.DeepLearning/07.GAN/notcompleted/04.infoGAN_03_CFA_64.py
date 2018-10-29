@@ -4,8 +4,8 @@ import numpy as np
 import os
 import PIL.Image as Image
 
-from lib.ProgressBar import ProgressBar
-from lib.dataset.pytorch_dataset import Cifar10DataSetForPytorch
+from lib.utils.ProgressBar import ProgressBar
+from lib.pytorch.dataset.pytorch_dataset import Cifar10DataSetForPytorch
 
 CONFIG={
     "NOISE_DIM" : 100,

@@ -1,8 +1,9 @@
 import keras
-import lib_keras.yolov3.net as k_net
-import lib_keras.yolov3.data as k_data
+import lib.keras.yolov3.net as k_net
+import lib.keras.yolov3.data as k_data
 import numpy as np
 
+keras.models.load_model("utils/yolo.h5")
 '''
 Model_path使用keras_yolov3_coco.h5和keras_yolov3_darknet53_pre.h5都可以。
 '''

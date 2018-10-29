@@ -9,7 +9,7 @@ from torch.nn import Module, Sequential, ConvTranspose2d, BatchNorm2d, ReLU,Tanh
 from torch.optim import Adam
 from torch.autograd import Variable
 
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 
 CONFIG = {
     "EPOCHS" : 100,

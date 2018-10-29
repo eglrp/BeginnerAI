@@ -7,8 +7,8 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from lib.models.fcn import FCN32sNet
-from lib.dataset.pytorch_dataset import VOCClassSegDataSet
+from lib.pytorch.models.fcn import FCN32sNet
+from lib.pytorch.dataset.pytorch_dataset import VOCClassSegDataSet
 from lib.Config import FCNConfig
 def _fast_hist(label_true, label_pred, n_class):
     mask = (label_true >= 0) & (label_true < n_class)

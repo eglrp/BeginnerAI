@@ -3,14 +3,14 @@ https://github.com/kuangliu/pytorch-retinanet
 '''
 import torch
 import torchvision
-import lib.retinanet.dataset as rn_data
+import lib.pytorch.retinanet.dataset as rn_data
 import os
-import lib.retinanet.net as rn_net
-import lib.retinanet.loss as rn_loss
-import lib.ProgressBar as j_bar
-import lib.retinanet.predict as rn_predict
+import lib.pytorch.retinanet.net as rn_net
+import lib.pytorch.retinanet.loss as rn_loss
+import lib.utils.ProgressBar as j_bar
+import lib.pytorch.retinanet.predict as rn_predict
 import tqdm
-import lib.utils.logger as logger
+import lib.pytorch.utils.logger as logger
 
 CONFIG = {
     "LEARNING_RATE" : 1e-3,

@@ -4,8 +4,8 @@ import torchvision as tv
 import torch.autograd as t_auto
 import torch.optim as t_optim
 
-import lib.ProgressBar as j_bar
-import lib.dataset.pytorch_dataset as j_data
+import lib.utils.ProgressBar as j_bar
+import lib.pytorch.dataset.pytorch_dataset as j_data
 
 CONFIG = {
     ""
