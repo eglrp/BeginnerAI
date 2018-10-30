@@ -1,6 +1,7 @@
 # https://github.com/yhcc/yolo2
 import lib.keras.yolov2.net as k_net
 import keras
+import tensorflow.keras as k
 
 CONFIG = {
     "MODEL_PATH" : "utils/keras_yolov2.h5",

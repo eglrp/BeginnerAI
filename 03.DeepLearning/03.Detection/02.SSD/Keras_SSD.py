@@ -78,6 +78,7 @@ model.load_weights(CONFIG["WEIGHTS_FILE"], by_name=True)
 
 sgd = keras.optimizers.SGD(lr=0.001, momentum=0.9, decay=0.0, nesterov=False)
 ssd_loss = k_loss.SSDLoss(neg_pos_ratio=3, alpha=1.0)
+model.compile(optimizer=sgd, loss=ssd_loss.compute_loss)
 
 train_dataset = k_data.DataGenerator(load_images_into_memory=False, hdf5_dataset_path=None)
 val_dataset = k_data.DataGenerator(load_images_into_memory=False, hdf5_dataset_path=None)
@@ -127,7 +128,7 @@ predictor_sizes = [model.get_layer('conv4_3_norm_mbox_conf').output_shape[1:3],
 
 ssd_input_encoder = k_data.SSDInputEncoder(img_height=CONFIG["IMAGE_SIZE"],
                                            img_width=CONFIG["IMAGE_SIZE"],
-                                           n_classes=21,
+                                           n_classes=20,
                                            predictor_sizes=predictor_sizes,
                                            scales=[0.1, 0.2, 0.37, 0.54, 0.71, 0.88, 1.05],
                                            aspect_ratios_per_layer=[[1.0, 2.0, 0.5],

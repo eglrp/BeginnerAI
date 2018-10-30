@@ -3,7 +3,7 @@ import os
 import PIL
 import keras
 import tensorflow as tf
-
+print(tf.keras.__version__)
 CONFIG = {
     "MODEL_PATH" : "utils/yolo.h5",
     "ANCHORS" : "10,13,  16,30,  33,23,  30,61,  62,45,  59,119,  116,90,  156,198,  373,326",
