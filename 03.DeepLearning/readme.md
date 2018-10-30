@@ -55,7 +55,7 @@ PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjyk
 ## Mask RCNN(Ballon)
 | 图片一 | 图片二 |
 | ------ | ------ |
-| ![images](result/04_05_MASKRCNN_01.png) | ![images](result/04_05_MASKRCNN_02.png) |
+| ![images](result/04_05_MASKRCNN_01.jpg) | ![images](result/04_05_MASKRCNN_02.jpg) |
 
 ## Mask RCNN(COCO)
 | 图片一 | 图片二 |
