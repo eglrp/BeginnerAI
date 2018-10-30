@@ -175,6 +175,13 @@ class DataGenerator:
         else:
             self.hdf5_dataset = None
 
+    def get_dataset_size(self):
+        '''
+        Returns:
+            The number of images in the dataset.
+        '''
+        return self.dataset_size
+
     def parse_xml(self,
                   images_dirs,
                   image_set_filenames,
@@ -2460,3 +2467,63 @@ class RandomPatchInf:
                         return image, labels, inverter
                     else:
                         return image, labels
+
+class RandomPadFixedAR:
+    '''
+    Adds the minimal possible padding to an image that results in a patch
+    of the given fixed aspect ratio that contains the entire image.
+
+    Since the aspect ratio of the resulting images is constant, they
+    can subsequently be resized to the same size without distortion.
+    '''
+
+    def __init__(self,
+                 patch_aspect_ratio,
+                 background=(0,0,0),
+                 labels_format={'class_id': 0, 'xmin': 1, 'ymin': 2, 'xmax': 3, 'ymax': 4}):
+        '''
+        Arguments:
+            patch_aspect_ratio (float): The fixed aspect ratio that all sampled patches will have.
+            background (list/tuple, optional): A 3-tuple specifying the RGB color value of the potential
+                background pixels of the scaled images. In the case of single-channel images,
+                the first element of `background` will be used as the background pixel value.
+            labels_format (dict, optional): A dictionary that defines which index in the last axis of the labels
+                of an image contains which bounding box coordinate. The dictionary maps at least the keywords
+                'xmin', 'ymin', 'xmax', and 'ymax' to their respective indices within last axis of the labels array.
+        '''
+
+        self.patch_aspect_ratio = patch_aspect_ratio
+        self.background = background
+        self.labels_format = labels_format
+        self.random_patch = RandomPatch(patch_coord_generator=k_data.PatchCoordinateGenerator(), # Just a dummy object
+                                               box_filter=None,
+                                               image_validator=None,
+                                               n_trials_max=1,
+                                               clip_boxes=False,
+                                               background=self.background,
+                                               prob=1.0,
+                                               labels_format=self.labels_format)
+
+    def __call__(self, image, labels=None, return_inverter=False):
+
+        img_height, img_width = image.shape[:2]
+
+        if img_width < img_height:
+            patch_height = img_height
+            patch_width = int(round(patch_height * self.patch_aspect_ratio))
+        else:
+            patch_width = img_width
+            patch_height = int(round(patch_width / self.patch_aspect_ratio))
+
+        # Now that we know the desired height and width for the patch,
+        # instantiate an appropriate patch coordinate generator.
+        patch_coord_generator = PatchCoordinateGenerator(img_height=img_height,
+                                                                img_width=img_width,
+                                                                must_match='h_w',
+                                                                patch_height=patch_height,
+                                                                patch_width=patch_width)
+
+        # The rest of the work is done by `RandomPatch`.
+        self.random_patch.patch_coord_generator = patch_coord_generator
+        self.random_patch.labels_format = self.labels_format
+        return self.random_patch(image, labels, return_inverter)
