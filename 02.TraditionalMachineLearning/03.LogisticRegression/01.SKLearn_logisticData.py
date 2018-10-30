@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 
 def loadDataSet():
     dataMat = []                                                        #创建数据列表

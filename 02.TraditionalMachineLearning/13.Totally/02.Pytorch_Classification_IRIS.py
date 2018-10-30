@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib as mpl
 import torch
 
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation

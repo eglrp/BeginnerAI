@@ -3,7 +3,7 @@ from torch.nn import Linear, Sequential, ReLU, MSELoss
 import numpy as np
 from torch.autograd import Variable
 from torch.optim import SGD, RMSprop
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 

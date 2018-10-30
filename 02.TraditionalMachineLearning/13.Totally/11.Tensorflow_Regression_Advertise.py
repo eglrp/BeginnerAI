@@ -3,7 +3,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import matplotlib.animation as animation
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 import pandas as pd
 from sklearn.model_selection import train_test_split
 

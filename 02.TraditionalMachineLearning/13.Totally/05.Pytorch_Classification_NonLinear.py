@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib as mpl
 import torch
 
-from lib.ProgressBar import ProgressBar
+from lib.utils.ProgressBar import ProgressBar
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
