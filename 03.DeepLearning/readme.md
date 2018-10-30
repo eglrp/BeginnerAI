@@ -16,7 +16,7 @@ PTH和生成动画都放在[Link](https://pan.baidu.com/s/1cX05e5wlB_2TAuCBANjyk
 | | 图片一 | 图片二 |
 | ------| ------ | ------ |
 | Pytorch | ![images](result/03_02_SSD_01.png) | ![images](result/03_02_SSD_02.png) |
-| Keras | ![images](result/03_02_SSD_Keras_01.png) | ![images](result/03_02_SSD_Keras_02.png) |
+| Keras | ![images](result/03_02_SSD_Keras_01.jpg) | ![images](result/03_02_SSD_Keras_02.jpg) |
 
 ## YOLOV2
 | 图片一 | 图片二 |
