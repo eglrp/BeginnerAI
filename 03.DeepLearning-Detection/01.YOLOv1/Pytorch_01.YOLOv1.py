@@ -7,6 +7,7 @@ import lib.pytorch.yolov1.loss as yolo_loss
 import lib.pytorch.yolov1.dataset as yolo_data
 import lib.pytorch.yolov1.predict as yolo_predict
 import lib.pytorch.utils.logger as logger
+import lib.utils.Config as cfg
 
 import lib.utils.ProgressBar as j_bar
 
@@ -18,7 +19,6 @@ CONFIG = {
     "ALPHA" : 0.1,
     "BATCH_SIZE" : 16,
     "DATA_PATH" : "/input/VOC",
-    "IMAGE_LIST_FILE" : "utils/voctrain.txt",
     "LOG_DIR" : "logs/",
     "CELL_NUMS" : 7,
     "CLASS_NUMS" : 20,
@@ -28,9 +28,7 @@ CONFIG = {
     "L_NOOBJ" : 0.5,
     "CELL_NUMS" : 7,
     "EACH_CELL_BOXES" : 2,
-    "CLASSES" : ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair',
-                 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep',
-                 'sofa', 'train', 'tvmonitor']
+    "CLASSES" : cfg.TOTAL_CONFIG["voc"]["CLASSES"]
 }
 
 FROM_TRAIN_ITER = 1
