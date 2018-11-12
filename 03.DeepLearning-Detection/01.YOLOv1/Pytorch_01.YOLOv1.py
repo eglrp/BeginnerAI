@@ -17,7 +17,7 @@ CONFIG = {
     "IMAGE_CHANNEL" : 3,
     "ALPHA" : 0.1,
     "BATCH_SIZE" : 16,
-    "DATA_PATH" : "/input/VOC/JPEGImages",
+    "DATA_PATH" : "/input/VOC",
     "IMAGE_LIST_FILE" : "utils/voctrain.txt",
     "LOG_DIR" : "logs/",
     "CELL_NUMS" : 7,
@@ -36,6 +36,7 @@ CONFIG = {
 FROM_TRAIN_ITER = 1
 
 Net = yolo_model.YoLoV1Net(CONFIG)
+print(Net)
 criterion = yolo_loss.YoLoV1Loss(CONFIG)
 
 if CONFIG["USE_GPU"]:
